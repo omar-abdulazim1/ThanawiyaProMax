@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { Container, Row, Col, Card, Button, Badge, Tabs, Tab, Form, Modal } from 'react-bootstrap';
+import { Container, Row, Col, Card, Button, Badge, Tabs, Tab, Form, Modal, Spinner } from 'react-bootstrap';
 import { toast } from 'react-toastify';
+import { tutorAPI, userAPI, getCurrentUserData } from '../../services/backendApi';
 
 function TutorProfile() {
   const { id } = useParams();
@@ -14,105 +15,95 @@ function TutorProfile() {
     subject: '',
     notes: ''
   });
+  const [tutor, setTutor] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [isFavorite, setIsFavorite] = useState(false);
+  const currentUser = getCurrentUserData();
 
-  // Load favorite status on mount
+  // Load tutor data from backend
   useEffect(() => {
-    const currentUser = JSON.parse(localStorage.getItem('currentUser'));
-    if (currentUser && currentUser.role === 'student') {
-      const users = JSON.parse(localStorage.getItem('users') || '[]');
-      const user = users.find(u => u.id === currentUser.id);
-      if (user && user.favoritesTutors) {
-        setIsFavorite(user.favoritesTutors.includes(String(id)));
+    const fetchTutor = async () => {
+      try {
+        setLoading(true);
+        const response = await tutorAPI.getTutorById(id);
+        if (response.success && response.data) {
+          // Ensure userId is populated
+          if (!response.data.userId || !response.data.userId.name) {
+            toast.error('بيانات المدرس غير مكتملة');
+            setLoading(false);
+            return;
+          }
+          
+          setTutor(response.data);
+          
+          // Check if tutor is in favorites
+          if (currentUser && currentUser.favoritesTutors && response.data.userId._id) {
+            setIsFavorite(currentUser.favoritesTutors.includes(response.data.userId._id));
+          }
+        } else {
+          toast.error('فشل تحميل بيانات المدرس');
+        }
+      } catch (error) {
+        console.error('Error loading tutor:', error);
+        toast.error('حدث خطأ أثناء تحميل البيانات');
+      } finally {
+        setLoading(false);
       }
-    }
+    };
+    
+    fetchTutor();
   }, [id]);
 
   // Toggle favorite
-  const toggleFavorite = () => {
-    const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+  const toggleFavorite = async () => {
     if (!currentUser || currentUser.role !== 'student') {
       toast.error('يجب تسجيل الدخول كطالب لإضافة المدرسين للمفضلة');
       return;
     }
 
-    const users = JSON.parse(localStorage.getItem('users') || '[]');
-    const userIndex = users.findIndex(u => u.id === currentUser.id);
-    
-    if (userIndex === -1) return;
-
-    const user = users[userIndex];
-    let updatedFavorites = user.favoritesTutors || [];
-    
-    if (updatedFavorites.includes(String(id))) {
-      // Remove from favorites
-      updatedFavorites = updatedFavorites.filter(tutorId => tutorId !== String(id));
-      toast.success('تم إزالة المدرس من المفضلة');
-      setIsFavorite(false);
-    } else {
-      // Add to favorites
-      updatedFavorites.push(String(id));
-      toast.success('تم إضافة المدرس للمفضلة');
-      setIsFavorite(true);
+    if (!tutor || !tutor.userId || !tutor.userId._id) {
+      toast.error('بيانات المدرس غير متوفرة');
+      return;
     }
 
-    users[userIndex] = { ...user, favoritesTutors: updatedFavorites };
-    localStorage.setItem('users', JSON.stringify(users));
-  };
-
-  // Mock tutor data
-  const tutor = {
-    id: 1,
-    name: 'محمد أحمد علي',
-    subjects: [
-      { name: 'الرياضيات', price: 150 },
-      { name: 'الفيزياء', price: 140 }
-    ],
-    rating: 4.9,
-    totalSessions: 120,
-    totalStudents: 45,
-    university: 'جامعة القاهرة - كلية الهندسة',
-    availability: ['السبت', 'الأحد', 'الاثنين', 'الثلاثاء'],
-    availableTimes: ['8:00', '10:00', '14:00', '16:00', '18:00', '20:00'],
-    bio: 'مدرس متخصص في الرياضيات والفيزياء مع خبرة 3 سنوات في تدريس طلاب الثانوية العامة. أسلوب تدريس مبسط وفعال يضمن فهم المادة بشكل كامل.',
-    image: '👨‍🏫',
-    reviews: [
-      {
-        id: 1,
-        student: 'أحمد محمود',
-        rating: 5,
-        comment: 'مدرس ممتاز! شرحه واضح ومبسط جداً',
-        date: '2025-11-15'
-      },
-      {
-        id: 2,
-        student: 'سارة علي',
-        rating: 5,
-        comment: 'استفدت كثيراً من الجلسات. أنصح به بشدة',
-        date: '2025-11-10'
-      },
-      {
-        id: 3,
-        student: 'محمد حسن',
-        rating: 4,
-        comment: 'جيد جداً ومتعاون',
-        date: '2025-11-05'
+    try {
+      const tutorUserId = tutor.userId._id;
+      
+      if (isFavorite) {
+        // Remove from favorites
+        await userAPI.removeFavorite(currentUser._id, tutorUserId);
+        setIsFavorite(false);
+        toast.success('تم إزالة المدرس من المفضلة');
+      } else {
+        // Add to favorites
+        await userAPI.addFavorite(currentUser._id, tutorUserId);
+        setIsFavorite(true);
+        toast.success('تم إضافة المدرس للمفضلة');
       }
-    ]
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+      toast.error('فشل تحديث المفضلة');
+    }
   };
 
   const handleBooking = (e) => {
     e.preventDefault();
     
-    // Find selected subject to get price
-    const selectedSubject = tutor.subjects.find(s => s.name === bookingData.subject);
-    const hourlyRate = selectedSubject ? selectedSubject.price : 150;
+    if (!tutor || !tutor.userId || !tutor.userId._id) {
+      toast.error('بيانات المدرس غير متوفرة');
+      return;
+    }
+    
+    // Get hourly rate and calculate total hours
+    const hourlyRate = tutor.hourlyRate || 0;
     const totalHours = parseInt(bookingData.duration) / 60;
     
     // Navigate to checkout with booking data
+    // Backend expects userId (the User document ID), not the Tutor document ID
     navigate('/checkout', {
       state: {
-        tutorName: tutor.name,
+        tutorId: tutor.userId._id, // User ID (backend looks for Tutor.findOne({ userId: tutorId }))
+        tutorName: tutor.userId.name || 'مدرس',
         subject: bookingData.subject,
         date: bookingData.date,
         time: bookingData.time,
@@ -126,6 +117,29 @@ function TutorProfile() {
     setShowBookingModal(false);
   };
 
+  if (loading) {
+    return (
+      <Container className="py-5 text-center">
+        <Spinner animation="border" role="status">
+          <span className="visually-hidden">Loading...</span>
+        </Spinner>
+        <p className="mt-3">جاري تحميل بيانات المدرس...</p>
+      </Container>
+    );
+  }
+
+  if (!tutor) {
+    return (
+      <Container className="py-5 text-center">
+        <div className="display-1 mb-3">😕</div>
+        <h3>لم يتم العثور على المدرس</h3>
+        <Button as={Link} to="/student/find-tutors" variant="primary" className="mt-3">
+          العودة لقائمة المدرسين
+        </Button>
+      </Container>
+    );
+  }
+
   return (
     <Container className="py-5">
       <Row className="g-4">
@@ -134,29 +148,35 @@ function TutorProfile() {
           <Card className="shadow-sm border-0 mb-4">
             <Card.Body className="p-4">
               <div className="d-flex align-items-start">
-                <div className="display-1 me-4">{tutor.image}</div>
+                <div className="display-1 me-4">👨‍🏫</div>
                 <div className="flex-grow-1">
-                  <h2 className="fw-bold mb-2">{tutor.name}</h2>
-                  <p className="text-muted mb-3">{tutor.university}</p>
+                  <h2 className="fw-bold mb-2">{tutor.userId?.name || 'مدرس'}</h2>
+                  <p className="text-muted mb-3">
+                    {tutor.university || 'جامعة'} - {tutor.major || 'تخصص'}
+                  </p>
                   <div className="d-flex flex-wrap gap-3 mb-3">
                     <div>
                       <span className="badge bg-warning text-dark fs-6">
-                        ⭐ {tutor.rating}
+                        ⭐ {tutor.rating || 0}
                       </span>
                     </div>
                     <div className="text-muted">
-                      📚 {tutor.totalSessions} جلسة
+                      📚 {tutor.completedSessions || 0} جلسة
                     </div>
                     <div className="text-muted">
-                      👥 {tutor.totalStudents} طالب
+                      💰 {tutor.hourlyRate || 0} جنيه/ساعة
                     </div>
                   </div>
                   <div className="d-flex gap-2">
-                    {tutor.subjects.map((subject, idx) => (
-                      <Badge key={idx} bg="primary" className="fs-6">
-                        {subject.name}
-                      </Badge>
-                    ))}
+                    {tutor.teachingSubjects && tutor.teachingSubjects.length > 0 ? (
+                      tutor.teachingSubjects.map((subject, idx) => (
+                        <Badge key={idx} bg="primary" className="fs-6">
+                          {subject}
+                        </Badge>
+                      ))
+                    ) : (
+                      <Badge bg="secondary" className="fs-6">لا توجد مواد محددة</Badge>
+                    )}
                   </div>
                 </div>
               </div>
@@ -170,7 +190,13 @@ function TutorProfile() {
                 <Tab eventKey="about" title="نبذة">
                   <div className="py-3">
                     <h5 className="fw-bold mb-3">نبذة عن المدرس</h5>
-                    <p className="text-muted">{tutor.bio}</p>
+                    <p className="text-muted">{tutor.tutorBio || 'لا توجد نبذة متاحة'}</p>
+                    {tutor.userId.bio && (
+                      <>
+                        <h5 className="fw-bold mb-3 mt-4">معلومات إضافية</h5>
+                        <p className="text-muted">{tutor.userId.bio}</p>
+                      </>
+                    )}
                   </div>
                 </Tab>
 
@@ -178,14 +204,14 @@ function TutorProfile() {
                   <div className="py-3">
                     <h5 className="fw-bold mb-3">المواد المتاحة</h5>
                     <Row className="g-3">
-                      {tutor.subjects.map((subject, idx) => (
+                      {tutor.teachingSubjects && tutor.teachingSubjects.map((subject, idx) => (
                         <Col md={6} key={idx}>
                           <Card className="border">
                             <Card.Body>
                               <div className="d-flex justify-content-between align-items-center">
-                                <h6 className="fw-bold mb-0">{subject.name}</h6>
+                                <h6 className="fw-bold mb-0">{subject}</h6>
                                 <span className="text-primary fw-bold">
-                                  {subject.price} جنيه/ساعة
+                                  {tutor.hourlyRate} جنيه/ساعة
                                 </span>
                               </div>
                             </Card.Body>
@@ -198,42 +224,36 @@ function TutorProfile() {
 
                 <Tab eventKey="availability" title="الأوقات المتاحة">
                   <div className="py-3">
-                    <h5 className="fw-bold mb-3">الأيام المتاحة</h5>
-                    <div className="d-flex flex-wrap gap-2 mb-4">
-                      {tutor.availability.map((day, idx) => (
-                        <Badge key={idx} bg="success" className="fs-6 px-3 py-2">
-                          {day}
-                        </Badge>
-                      ))}
-                    </div>
                     <h5 className="fw-bold mb-3">الأوقات المتاحة</h5>
-                    <div className="d-flex flex-wrap gap-2">
-                      {tutor.availableTimes.map((time, idx) => (
-                        <Badge key={idx} bg="light" text="dark" className="fs-6 px-3 py-2 border">
-                          {time}
-                        </Badge>
-                      ))}
-                    </div>
+                    {tutor.availability && tutor.availability.length > 0 ? (
+                      <div className="d-flex flex-wrap gap-2">
+                        {tutor.availability.map((time, idx) => (
+                          <Badge key={idx} bg="success" className="fs-6 px-3 py-2">
+                            {time}
+                          </Badge>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-muted">لا توجد أوقات محددة، يرجى التواصل مع المدرس</p>
+                    )}
                   </div>
                 </Tab>
 
-                <Tab eventKey="reviews" title={`التقييمات (${tutor.reviews.length})`}>
+                <Tab eventKey="reviews" title={`التقييمات (${tutor.totalRatings || 0})`}>
                   <div className="py-3">
                     <h5 className="fw-bold mb-3">آراء الطلاب</h5>
-                    {tutor.reviews.map(review => (
-                      <Card key={review.id} className="mb-3 border">
-                        <Card.Body>
-                          <div className="d-flex justify-content-between mb-2">
-                            <h6 className="fw-bold mb-0">{review.student}</h6>
-                            <span className="badge bg-warning text-dark">
-                              ⭐ {review.rating}
-                            </span>
-                          </div>
-                          <p className="text-muted mb-2">{review.comment}</p>
-                          <small className="text-muted">{review.date}</small>
-                        </Card.Body>
-                      </Card>
-                    ))}
+                    {tutor.totalRatings > 0 ? (
+                      <div className="text-center py-4">
+                        <div className="display-3 mb-3">⭐</div>
+                        <h4 className="fw-bold">{tutor.rating}</h4>
+                        <p className="text-muted">بناءً على {tutor.totalRatings} تقييم</p>
+                      </div>
+                    ) : (
+                      <div className="text-center py-5">
+                        <div className="display-4 mb-3">📝</div>
+                        <p className="text-muted">لا توجد تقييمات بعد</p>
+                      </div>
+                    )}
                   </div>
                 </Tab>
               </Tabs>
@@ -256,7 +276,7 @@ function TutorProfile() {
                 </Button>
                 <Button 
                   as={Link}
-                  to={`/student/chat/${tutor.id}`}
+                  to={`/student/chat/${tutor._id}`}
                   variant="outline-primary"
                 >
                   💬 راسل المدرس
@@ -283,7 +303,7 @@ function TutorProfile() {
       {/* Booking Modal */}
       <Modal show={showBookingModal} onHide={() => setShowBookingModal(false)} size="lg" centered>
         <Modal.Header closeButton>
-          <Modal.Title>حجز جلسة مع {tutor.name}</Modal.Title>
+          <Modal.Title>حجز جلسة مع {tutor.userId?.name || 'المدرس'}</Modal.Title>
         </Modal.Header>
         <Modal.Body>
           <Form onSubmit={handleBooking}>
@@ -294,11 +314,19 @@ function TutorProfile() {
                 onChange={(e) => setBookingData({...bookingData, subject: e.target.value})}
               >
                 <option value="">اختر المادة</option>
-                {tutor.subjects.map((subject, idx) => (
-                  <option key={idx} value={subject.name}>
-                    {subject.name} - {subject.price} جنيه/ساعة
-                  </option>
-                ))}
+                {tutor.teachingSubjects && tutor.teachingSubjects.length > 0 ? (
+                  tutor.teachingSubjects.map((subject, idx) => (
+                    <option key={idx} value={subject}>
+                      {subject} - {tutor.hourlyRate || 0} جنيه/ساعة
+                    </option>
+                  ))
+                ) : (
+                  <>
+                    <option value="الرياضيات">الرياضيات - {tutor.hourlyRate || 0} جنيه/ساعة</option>
+                    <option value="العلوم">العلوم - {tutor.hourlyRate || 0} جنيه/ساعة</option>
+                    <option value="الفيزياء">الفيزياء - {tutor.hourlyRate || 0} جنيه/ساعة</option>
+                  </>
+                )}
               </Form.Select>
             </Form.Group>
 
@@ -322,9 +350,25 @@ function TutorProfile() {
                     onChange={(e) => setBookingData({...bookingData, time: e.target.value})}
                   >
                     <option value="">اختر الوقت</option>
-                    {tutor.availableTimes.map((time, idx) => (
-                      <option key={idx} value={time}>{time}</option>
-                    ))}
+                    {tutor.availability && tutor.availability.length > 0 ? (
+                      tutor.availability.map((time, idx) => (
+                        <option key={idx} value={time}>{time}</option>
+                      ))
+                    ) : (
+                      <>
+                        <option value="09:00">09:00 صباحاً</option>
+                        <option value="10:00">10:00 صباحاً</option>
+                        <option value="11:00">11:00 صباحاً</option>
+                        <option value="12:00">12:00 ظهراً</option>
+                        <option value="14:00">02:00 مساءً</option>
+                        <option value="15:00">03:00 مساءً</option>
+                        <option value="16:00">04:00 مساءً</option>
+                        <option value="17:00">05:00 مساءً</option>
+                        <option value="18:00">06:00 مساءً</option>
+                        <option value="19:00">07:00 مساءً</option>
+                        <option value="20:00">08:00 مساءً</option>
+                      </>
+                    )}
                   </Form.Select>
                 </Form.Group>
               </Col>

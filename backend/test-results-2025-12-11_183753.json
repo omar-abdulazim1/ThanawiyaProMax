@@ -1,0 +1,398 @@
+[
+  {
+    "Name": "GET /",
+    "Endpoint": "http://localhost:5000",
+    "Method": "GET",
+    "Status": "PASS",
+    "Category": "API Root",
+    "Number": "1.1",
+    "Description": "Verify API is running"
+  },
+  {
+    "Name": "POST /auth/register (Student)",
+    "Endpoint": "/auth/register",
+    "Method": "POST",
+    "Status": "PASS",
+    "Category": "Auth",
+    "Number": "2.1",
+    "Description": "Register new student"
+  },
+  {
+    "Name": "POST /auth/register (Tutor)",
+    "Endpoint": "/auth/register",
+    "Method": "POST",
+    "Status": "PASS",
+    "Category": "Auth",
+    "Number": "2.2",
+    "Description": "Register new tutor"
+  },
+  {
+    "Name": "POST /auth/login (Student)",
+    "Endpoint": "/auth/login",
+    "Method": "POST",
+    "Status": "PASS",
+    "Category": "Auth",
+    "Number": "2.3",
+    "Description": "Login as student"
+  },
+  {
+    "Name": "POST /auth/login (Tutor)",
+    "Endpoint": "/auth/login",
+    "Method": "POST",
+    "Status": "PASS",
+    "Category": "Auth",
+    "Number": "2.4",
+    "Description": "Login as tutor"
+  },
+  {
+    "Name": "POST /auth/login (Admin)",
+    "Endpoint": "/auth/login",
+    "Method": "POST",
+    "Status": "PASS",
+    "Category": "Auth",
+    "Number": "2.5",
+    "Description": "Login as admin"
+  },
+  {
+    "Name": "GET /auth/me (Student)",
+    "Endpoint": "/auth/me",
+    "Method": "GET",
+    "Status": "PASS",
+    "Category": "Auth",
+    "Number": "2.6",
+    "Description": "Get current student profile"
+  },
+  {
+    "Name": "GET /auth/me (Tutor)",
+    "Endpoint": "/auth/me",
+    "Method": "GET",
+    "Status": "PASS",
+    "Category": "Auth",
+    "Number": "2.7",
+    "Description": "Get current tutor profile"
+  },
+  {
+    "Name": "PUT /auth/password",
+    "Endpoint": "/auth/password",
+    "Method": "PUT",
+    "Status": "PASS",
+    "Category": "Auth",
+    "Number": "2.8",
+    "Description": "Update password"
+  },
+  {
+    "Name": "GET /tutors",
+    "Endpoint": "/tutors",
+    "Method": "GET",
+    "Status": "PASS",
+    "Category": "Tutors",
+    "Number": "3.1",
+    "Description": "Get all tutors (public)"
+  },
+  {
+    "Name": "GET /tutors?subject=...",
+    "Endpoint": "/tutors?subject=الرياضيات",
+    "Method": "GET",
+    "Status": "PASS",
+    "Category": "Tutors",
+    "Number": "3.2",
+    "Description": "Filter by subject"
+  },
+  {
+    "Name": "GET /tutors?minRate=...&maxRate=...",
+    "Endpoint": "/tutors?minRate=40&maxRate=70",
+    "Method": "GET",
+    "Status": "PASS",
+    "Category": "Tutors",
+    "Number": "3.3",
+    "Description": "Filter by rate range"
+  },
+  {
+    "Name": "GET /tutors?minRating=...",
+    "Endpoint": "/tutors?minRating=4",
+    "Method": "GET",
+    "Status": "PASS",
+    "Category": "Tutors",
+    "Number": "3.4",
+    "Description": "Filter by minimum rating"
+  },
+  {
+    "Name": "GET /tutors/:id",
+    "Endpoint": "/tutors/693af124a0c499e54b832189",
+    "Method": "GET",
+    "Status": "PASS",
+    "Category": "Tutors",
+    "Number": "3.5",
+    "Description": "Get tutor by ID"
+  },
+  {
+    "Name": "GET /tutors/user/:userId",
+    "Endpoint": "/tutors/user/693af124a0c499e54b832181",
+    "Method": "GET",
+    "Status": "PASS",
+    "Category": "Tutors",
+    "Number": "3.6",
+    "Description": "Get tutor by user ID"
+  },
+  {
+    "Name": "PUT /tutors/:id",
+    "Endpoint": "/tutors/693af124a0c499e54b832188",
+    "Method": "PUT",
+    "Status": "PASS",
+    "Category": "Tutors",
+    "Number": "3.7",
+    "Description": "Update tutor profile"
+  },
+  {
+    "Name": "GET /users (Admin)",
+    "Endpoint": "/users",
+    "Method": "GET",
+    "Status": "PASS",
+    "Category": "Users",
+    "Number": "4.1",
+    "Description": "Get all users as admin"
+  },
+  {
+    "Name": "GET /users?role=...",
+    "Endpoint": "/users?role=student",
+    "Method": "GET",
+    "Status": "PASS",
+    "Category": "Users",
+    "Number": "4.2",
+    "Description": "Filter users by role"
+  },
+  {
+    "Name": "GET /users?search=...",
+    "Endpoint": "/users?search=أحمد",
+    "Method": "GET",
+    "Status": "PASS",
+    "Category": "Users",
+    "Number": "4.3",
+    "Description": "Search users by name"
+  },
+  {
+    "Name": "GET /users/:id",
+    "Endpoint": "/users/693af123a0c499e54b832175",
+    "Method": "GET",
+    "Status": "PASS",
+    "Category": "Users",
+    "Number": "4.4",
+    "Description": "Get user by ID"
+  },
+  {
+    "Name": "PUT /users/:id",
+    "Endpoint": "/users/693af123a0c499e54b832175",
+    "Method": "PUT",
+    "Status": "PASS",
+    "Category": "Users",
+    "Number": "4.5",
+    "Description": "Update user profile"
+  },
+  {
+    "Name": "PUT /users/:id/balance (add)",
+    "Endpoint": "/users/693af123a0c499e54b832175/balance",
+    "Method": "PUT",
+    "Status": "PASS",
+    "Category": "Users",
+    "Number": "4.6",
+    "Description": "Add to balance"
+  },
+  {
+    "Name": "PUT /users/:id/balance (subtract)",
+    "Endpoint": "/users/693af123a0c499e54b832175/balance",
+    "Method": "PUT",
+    "Status": "PASS",
+    "Category": "Users",
+    "Number": "4.7",
+    "Description": "Subtract from balance"
+  },
+  {
+    "Name": "POST /users/:id/favorites/:tutorId",
+    "Error": "Response status code does not indicate success: 400 (Bad Request).",
+    "Endpoint": "/users/693af123a0c499e54b832175/favorites/693af124a0c499e54b832181",
+    "Method": "POST",
+    "Status": "FAIL",
+    "Category": "Users",
+    "Number": "4.8"
+  },
+  {
+    "Name": "DELETE /users/:id/favorites/:tutorId",
+    "Endpoint": "/users/693af123a0c499e54b832175/favorites/693af124a0c499e54b832181",
+    "Method": "DELETE",
+    "Status": "PASS",
+    "Category": "Users",
+    "Number": "4.9",
+    "Description": "Remove from favorites"
+  },
+  {
+    "Name": "POST /bookings",
+    "Endpoint": "/bookings",
+    "Method": "POST",
+    "Status": "PASS",
+    "Category": "Bookings",
+    "Number": "5.1",
+    "Description": "Create new booking"
+  },
+  {
+    "Name": "GET /bookings (Student)",
+    "Endpoint": "/bookings",
+    "Method": "GET",
+    "Status": "PASS",
+    "Category": "Bookings",
+    "Number": "5.2",
+    "Description": "Get student's bookings"
+  },
+  {
+    "Name": "GET /bookings (Tutor)",
+    "Endpoint": "/bookings",
+    "Method": "GET",
+    "Status": "PASS",
+    "Category": "Bookings",
+    "Number": "5.3",
+    "Description": "Get tutor's bookings"
+  },
+  {
+    "Name": "GET /bookings?status=...",
+    "Endpoint": "/bookings?status=pending",
+    "Method": "GET",
+    "Status": "PASS",
+    "Category": "Bookings",
+    "Number": "5.4",
+    "Description": "Filter by status"
+  },
+  {
+    "Name": "GET /bookings/:id",
+    "Endpoint": "/bookings/693af361e78ded38eaaca9fd",
+    "Method": "GET",
+    "Status": "PASS",
+    "Category": "Bookings",
+    "Number": "5.5",
+    "Description": "Get booking by ID"
+  },
+  {
+    "Name": "PUT /bookings/:id (Wrong tutor)",
+    "Endpoint": "/bookings/693af361e78ded38eaaca9fd",
+    "Method": "PUT",
+    "Status": "PASS",
+    "Category": "Bookings",
+    "Number": "5.6",
+    "Description": "Correctly rejected"
+  },
+  {
+    "Name": "PUT /bookings/:id (Cancel)",
+    "Endpoint": "/bookings/693af361e78ded38eaaca9fd",
+    "Method": "PUT",
+    "Status": "PASS",
+    "Category": "Bookings",
+    "Number": "5.7",
+    "Description": "Cancel booking"
+  },
+  {
+    "Name": "POST /payments (Deposit)",
+    "Endpoint": "/payments",
+    "Method": "POST",
+    "Status": "PASS",
+    "Category": "Payments",
+    "Number": "6.1",
+    "Description": "Create deposit"
+  },
+  {
+    "Name": "POST /payments (Withdrawal)",
+    "Endpoint": "/payments",
+    "Method": "POST",
+    "Status": "PASS",
+    "Category": "Payments",
+    "Number": "6.2",
+    "Description": "Create withdrawal"
+  },
+  {
+    "Name": "GET /payments",
+    "Endpoint": "/payments",
+    "Method": "GET",
+    "Status": "PASS",
+    "Category": "Payments",
+    "Number": "6.3",
+    "Description": "Get all payments"
+  },
+  {
+    "Name": "GET /payments?type=...",
+    "Endpoint": "/payments?type=deposit",
+    "Method": "GET",
+    "Status": "PASS",
+    "Category": "Payments",
+    "Number": "6.4",
+    "Description": "Filter by type"
+  },
+  {
+    "Name": "GET /payments?status=...",
+    "Endpoint": "/payments?status=completed",
+    "Method": "GET",
+    "Status": "PASS",
+    "Category": "Payments",
+    "Number": "6.5",
+    "Description": "Filter by status"
+  },
+  {
+    "Name": "GET /payments/:id",
+    "Endpoint": "/payments/693af361e78ded38eaacaa1d",
+    "Method": "GET",
+    "Status": "PASS",
+    "Category": "Payments",
+    "Number": "6.6",
+    "Description": "Get payment by ID"
+  },
+  {
+    "Name": "PUT /payments/:id (Admin)",
+    "Endpoint": "/payments/693af361e78ded38eaacaa1d",
+    "Method": "PUT",
+    "Status": "PASS",
+    "Category": "Payments",
+    "Number": "6.7",
+    "Description": "Update payment status"
+  },
+  {
+    "Name": "GET /bookings (No token)",
+    "Endpoint": "/bookings",
+    "Method": "GET",
+    "Status": "PASS",
+    "Category": "Security",
+    "Number": "7.1",
+    "Description": "Correctly rejected"
+  },
+  {
+    "Name": "GET /users (Student token)",
+    "Endpoint": "/users",
+    "Method": "GET",
+    "Status": "PASS",
+    "Category": "Security",
+    "Number": "7.2",
+    "Description": "Correctly rejected"
+  },
+  {
+    "Name": "GET /users (Tutor token)",
+    "Endpoint": "/users",
+    "Method": "GET",
+    "Status": "PASS",
+    "Category": "Security",
+    "Number": "7.3",
+    "Description": "Correctly rejected"
+  },
+  {
+    "Name": "GET /users/invalidid",
+    "Endpoint": "/users/invalidid123",
+    "Method": "GET",
+    "Status": "PASS",
+    "Category": "Security",
+    "Number": "7.4",
+    "Description": "Correctly rejected"
+  },
+  {
+    "Name": "GET /nonexistent",
+    "Endpoint": "/nonexistent",
+    "Method": "GET",
+    "Status": "PASS",
+    "Category": "Security",
+    "Number": "7.5",
+    "Description": "Correctly rejected"
+  }
+]

@@ -38,7 +38,7 @@ class ErrorBoundary extends Component {
               <p className="text-muted mb-4">
                 نعتذر عن الإزعاج. حدث خطأ أثناء تحميل هذه الصفحة.
               </p>
-              {process.env.NODE_ENV === 'development' && this.state.error && (
+              {import.meta.env.MODE === 'development' && this.state.error && (
                 <Card className="text-start mb-4 bg-light">
                   <Card.Body>
                     <h6 className="text-danger mb-2">تفاصيل الخطأ (Development Only):</h6>

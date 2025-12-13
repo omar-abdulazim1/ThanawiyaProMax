@@ -1,8 +1,13 @@
 import { useState } from 'react';
 import { Container, Row, Col, Card, Form, Button, Alert, Badge, Modal } from 'react-bootstrap';
-import { FaWallet, FaMobileAlt, FaCreditCard, FaPlus, FaEdit, FaTrash, FaCheckCircle } from 'react-icons/fa';
+import { FaWallet, FaMobileAlt, FaCreditCard, FaPlus, FaEdit, FaTrash, FaCheckCircle, FaUpload, FaUniversity, FaMoneyBillWave } from 'react-icons/fa';
+import { useAuth } from '../../context/AuthContext';
+import { paymentAPI } from '../../services/backendApi';
+import { toast } from 'react-toastify';
 
 function StudentPaymentMethods() {
+  const { user, refreshUser } = useAuth();
+  
   const [paymentMethods, setPaymentMethods] = useState([
     {
       id: 1,
@@ -15,7 +20,13 @@ function StudentPaymentMethods() {
   ]);
 
   const [showModal, setShowModal] = useState(false);
+  const [showChargeModal, setShowChargeModal] = useState(false);
   const [editingMethod, setEditingMethod] = useState(null);
+  const [chargeAmount, setChargeAmount] = useState('');
+  const [selectedPaymentType, setSelectedPaymentType] = useState('instapay');
+  const [chargeProof, setChargeProof] = useState(null);
+  const [chargeProofPreview, setChargeProofPreview] = useState(null);
+  const [processingCharge, setProcessingCharge] = useState(false);
   const [formData, setFormData] = useState({
     type: 'instapay',
     phoneNumber: '',
@@ -30,7 +41,8 @@ function StudentPaymentMethods() {
   const paymentTypes = [
     { value: 'instapay', label: 'إنستاباي', icon: <FaMobileAlt />, color: 'primary' },
     { value: 'vodafone', label: 'فودافون كاش', icon: <FaMobileAlt />, color: 'danger' },
-    { value: 'card', label: 'بطاقة بنكية', icon: <FaCreditCard />, color: 'success' }
+    { value: 'bank', label: 'تحويل بنكي', icon: <FaUniversity />, color: 'info' },
+    { value: 'fawry', label: 'فوري', icon: <FaMoneyBillWave />, color: 'warning' }
   ];
 
   const handleChange = (e) => {
@@ -159,11 +171,74 @@ function StudentPaymentMethods() {
     setTimeout(() => setSuccess(''), 3000);
   };
 
+  const handleChargeWallet = async (e) => {
+    e.preventDefault();
+    
+    if (!chargeAmount || parseFloat(chargeAmount) < 10) {
+      toast.error('الحد الأدنى للشحن 10 جنيه');
+      return;
+    }
+    
+    if (!chargeProof) {
+      toast.error('يرجى رفع إثبات التحويل');
+      return;
+    }
+    
+    setProcessingCharge(true);
+    
+    try {
+      // In a real app, you would upload the image to a server
+      // For now, we'll simulate the payment creation
+      const paymentPayload = {
+        amount: parseFloat(chargeAmount),
+        paymentMethod: selectedPaymentType,
+        type: 'deposit',
+        transactionProof: chargeProof.name // In real app, this would be the uploaded file URL
+      };
+      
+      const response = await paymentAPI.deposit(paymentPayload);
+      
+      if (response.success) {
+        toast.success('تم إرسال طلب الشحن بنجاح! سيتم مراجعته خلال 24 ساعة');
+        setShowChargeModal(false);
+        setChargeAmount('');
+        setChargeProof(null);
+        setChargeProofPreview(null);
+        // Refresh user data to get updated balance
+        await refreshUser();
+      } else {
+        toast.error('فشل إرسال طلب الشحن');
+      }
+    } catch (error) {
+      console.error('Error charging wallet:', error);
+      toast.error('حدث خطأ أثناء معالجة الطلب');
+    } finally {
+      setProcessingCharge(false);
+    }
+  };
+  
+  const handleProofChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) { // 5MB limit
+        toast.error('حجم الملف يجب أن يكون أقل من 5 ميجابايت');
+        return;
+      }
+      
+      setChargeProof(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setChargeProofPreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   return (
     <Container className="py-4">
       <div className="d-flex justify-content-between align-items-center mb-4">
         <div>
-          <h2 className="fw-bold mb-1">طرق الدفع</h2>
+          <h2 className="fw-bold mb-1">المحفظة وطرق الدفع</h2>
           <p className="text-muted mb-0">أضف وأدر طرق الدفع الخاصة بك</p>
         </div>
         <Button variant="primary" onClick={handleAddMethod}>
@@ -175,6 +250,25 @@ function StudentPaymentMethods() {
       {success && <Alert variant="success">{success}</Alert>}
 
       <Row>
+        <Col lg={4}>
+          {/* Wallet Balance Card */}
+          <Card className="shadow-sm border-0 mb-4">
+            <Card.Body className="text-center p-4">
+              <FaWallet size={50} className="text-primary mb-3" />
+              <h5 className="text-muted mb-2">رصيد المحفظة</h5>
+              <h2 className="fw-bold text-primary mb-3">{user?.balance || 0} جنيه</h2>
+              <Button 
+                variant="success" 
+                className="w-100"
+                onClick={() => setShowChargeModal(true)}
+              >
+                <FaPlus className="me-2" />
+                شحن المحفظة
+              </Button>
+            </Card.Body>
+          </Card>
+        </Col>
+        
         <Col lg={8}>
           {paymentMethods.length === 0 ? (
             <Card className="shadow-sm border-0 text-center py-5">
@@ -425,7 +519,178 @@ function StudentPaymentMethods() {
           </Modal.Footer>
         </Form>
       </Modal>
-    </Container>
+      {/* Charge Wallet Modal */}
+      <Modal show={showChargeModal} onHide={() => setShowChargeModal(false)} size="lg" centered>
+        <Modal.Header closeButton>
+          <Modal.Title>شحن المحفظة</Modal.Title>
+        </Modal.Header>
+        <Form onSubmit={handleChargeWallet}>
+          <Modal.Body>
+            <Alert variant="info">
+              <h6 className="fw-bold mb-2">📱 خطوات الشحن:</h6>
+              <ol className="mb-0">
+                <li>اختر طريقة التحويل (إنستاباي أو فودافون كاش)</li>
+                <li>قم بتحويل المبلغ إلى العنوان/الرقم المذكور أدناه</li>
+                <li>أدخل المبلغ المحول في الحقل</li>
+                <li>قم برفع صورة إثبات التحويل</li>
+                <li>اضغط على "تأكيد الشحن"</li>
+                <li>سيتم مراجعة الطلب وإضافة المبلغ خلال 24 ساعة</li>
+              </ol>
+            </Alert>
+
+            <Form.Group className="mb-3">
+              <Form.Label>طريقة الشحن</Form.Label>
+              <Row className="g-3">
+                <Col md={6}>
+                  <Card
+                    className={`text-center cursor-pointer ${selectedPaymentType === 'instapay' ? 'border-primary border-2' : 'border'}`}
+                    style={{ cursor: 'pointer' }}
+                    onClick={() => setSelectedPaymentType('instapay')}
+                  >
+                    <Card.Body className="py-3">
+                      <FaMobileAlt size={30} className="text-primary mb-2" />
+                      <div className="fw-bold">إنستاباي</div>
+                      <small className="text-muted" dir="ltr">thanawiyapro@instapay</small>
+                    </Card.Body>
+                  </Card>
+                </Col>
+                
+                <Col md={6}>
+                  <Card
+                    className={`text-center cursor-pointer ${selectedPaymentType === 'vodafone' ? 'border-danger border-2' : 'border'}`}
+                    style={{ cursor: 'pointer' }}
+                    onClick={() => setSelectedPaymentType('vodafone')}
+                  >
+                    <Card.Body className="py-3">
+                      <FaMobileAlt size={30} className="text-danger mb-2" />
+                      <div className="fw-bold">فودافون كاش</div>
+                      <small className="text-muted" dir="ltr">01001234567</small>
+                    </Card.Body>
+                  </Card>
+                </Col>
+
+                <Col md={6}>
+                  <Card
+                    className={`text-center cursor-pointer ${selectedPaymentType === 'bank' ? 'border-info border-2' : 'border'}`}
+                    style={{ cursor: 'pointer' }}
+                    onClick={() => setSelectedPaymentType('bank')}
+                  >
+                    <Card.Body className="py-3">
+                      <FaUniversity size={30} className="text-info mb-2" />
+                      <div className="fw-bold">تحويل بنكي</div>
+                      <small className="text-muted">بنك مصر</small>
+                    </Card.Body>
+                  </Card>
+                </Col>
+
+                <Col md={6}>
+                  <Card
+                    className={`text-center cursor-pointer ${selectedPaymentType === 'fawry' ? 'border-warning border-2' : 'border'}`}
+                    style={{ cursor: 'pointer' }}
+                    onClick={() => setSelectedPaymentType('fawry')}
+                  >
+                    <Card.Body className="py-3">
+                      <FaMoneyBillWave size={30} className="text-warning mb-2" />
+                      <div className="fw-bold">فوري</div>
+                      <small className="text-muted">كود: 8374629</small>
+                    </Card.Body>
+                  </Card>
+                </Col>
+              </Row>
+
+              {/* Payment details based on selection */}
+              {selectedPaymentType === 'bank' && (
+                <Alert variant="info" className="mt-3 mb-0">
+                  <h6 className="fw-bold mb-2">📄 تفاصيل الحساب البنكي:</h6>
+                  <ul className="mb-0">
+                    <li><strong>اسم البنك:</strong> بنك مصر</li>
+                    <li><strong>رقم الحساب:</strong> <span dir="ltr">1234567890123456</span></li>
+                    <li><strong>IBAN:</strong> <span dir="ltr">EG380002001234567890123456789</span></li>
+                    <li><strong>اسم المستفيد:</strong> ثانوية برو للخدمات التعليمية</li>
+                  </ul>
+                </Alert>
+              )}
+
+              {selectedPaymentType === 'fawry' && (
+                <Alert variant="warning" className="mt-3 mb-0">
+                  <h6 className="fw-bold mb-2">💳 كود فوري:</h6>
+                  <div className="text-center py-2">
+                    <h3 className="fw-bold text-warning mb-1" dir="ltr">8374629</h3>
+                    <p className="mb-0 small">استخدم هذا الكود في أي فرع فوري أو ماكينة</p>
+                  </div>
+                </Alert>
+              )}
+            </Form.Group>
+
+            <Form.Group className="mb-3">
+              <Form.Label>المبلغ المحول (جنيه مصري)</Form.Label>
+              <Form.Control
+                type="number"
+                value={chargeAmount}
+                onChange={(e) => setChargeAmount(e.target.value)}
+                placeholder="أدخل المبلغ"
+                min="10"
+                step="0.01"
+                required
+                dir="ltr"
+                style={{ textAlign: 'right' }}
+              />
+              <Form.Text className="text-muted">
+                الحد الأدنى: 10 جنيه
+              </Form.Text>
+            </Form.Group>
+
+            <Form.Group className="mb-3">
+              <Form.Label>إثبات التحويل (صورة)</Form.Label>
+              <Form.Control
+                type="file"
+                accept="image/*"
+                onChange={handleProofChange}
+                required
+              />
+              <Form.Text className="text-muted">
+                يرجى رفع صورة واضحة لإثبات التحويل (PNG, JPG - حد أقصى 5MB)
+              </Form.Text>
+            </Form.Group>
+
+            {chargeProofPreview && (
+              <div className="text-center mb-3">
+                <img 
+                  src={chargeProofPreview} 
+                  alt="Transaction Proof" 
+                  style={{ maxWidth: '100%', maxHeight: '300px', borderRadius: '8px' }}
+                  className="border"
+                />
+              </div>
+            )}
+
+            <Alert variant="warning" className="mb-0">
+              <strong>⚠️ تنبيه:</strong> تأكد من صحة المبلغ المدخل ومطابقته لإثبات التحويل. الطلبات المخالفة سيتم رفضها.
+            </Alert>
+          </Modal.Body>
+          <Modal.Footer>
+            <Button 
+              variant="secondary" 
+              onClick={() => {
+                setShowChargeModal(false);
+                setChargeAmount('');
+                setChargeProof(null);
+                setChargeProofPreview(null);
+              }}
+              disabled={processingCharge}
+            >
+              إلغاء
+            </Button>
+            <Button 
+              variant="success" 
+              type="submit"
+              disabled={processingCharge}
+            >
+              {processingCharge ? 'جاري المعالجة...' : 'تأكيد الشحن'}
+            </Button>
+          </Modal.Footer>
+        </Form>
+      </Modal>    </Container>
   );
 }
 

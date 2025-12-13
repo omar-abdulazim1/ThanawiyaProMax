@@ -1,6 +1,8 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Container, Row, Col, Card, Button, Badge, Tabs, Tab, Modal, Form } from 'react-bootstrap';
+import { useState, useEffect } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { Container, Row, Col, Card, Button, Badge, Tabs, Tab, Modal, Form, Spinner } from 'react-bootstrap';
+import { toast } from 'react-toastify';
+import { bookingAPI } from '../../services/backendApi';
 
 function BookingManagement() {
   const navigate = useNavigate();
@@ -8,8 +10,40 @@ function BookingManagement() {
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [showRescheduleModal, setShowRescheduleModal] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState(null);
+  const [bookings, setBookings] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const bookings = {
+  useEffect(() => {
+    fetchBookings();
+  }, []);
+
+  const fetchBookings = async () => {
+    try {
+      setLoading(true);
+      const response = await bookingAPI.getAllBookings();
+      if (response.success) {
+        setBookings(response.data);
+      }
+    } catch (error) {
+      toast.error('فشل تحميل الحجوزات');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const upcomingBookings = bookings.filter(b => 
+    b.status === 'pending' || b.status === 'confirmed'
+  );
+
+  const completedBookings = bookings.filter(b => 
+    b.status === 'completed'
+  );
+
+  const cancelledBookings = bookings.filter(b => 
+    b.status === 'cancelled'
+  );
+
+  const oldBookings = {
     upcoming: [
       {
         id: 1,
@@ -115,108 +149,118 @@ function BookingManagement() {
     });
   };
 
-  const renderBookingCard = (booking) => (
-    <Card key={booking.id} className="mb-3 shadow-sm border-0">
-      <Card.Body>
-        <Row className="align-items-center">
-          <Col md={6}>
-            <h5 className="fw-bold mb-2">{booking.subject}</h5>
-            <p className="text-muted mb-1">
-              <small>المدرس: {booking.tutor}</small>
-            </p>
-            <p className="text-muted mb-2">
-              <small>📅 {booking.date} • ⏰ {booking.time}</small>
-            </p>
-            <p className="mb-2">
-              <small>⏱️ المدة: {booking.duration} دقيقة</small>
-            </p>
-            <Badge bg={
-              booking.status === 'مؤكدة' ? 'success' :
-              booking.status === 'قيد الانتظار' ? 'warning' :
-              booking.status === 'مكتملة' ? 'info' : 'danger'
-            }>
-              {booking.status}
-            </Badge>
-            {booking.paymentStatus && (
-              <Badge bg={booking.paymentStatus === 'مدفوعة' ? 'success' : 'warning'} className="ms-2">
-                {booking.paymentStatus}
+  const renderBookingCard = (booking) => {
+    // Format date and time from backend
+    const sessionDate = new Date(booking.sessionDate);
+    const formattedDate = sessionDate.toLocaleDateString('ar-EG');
+    const formattedTime = sessionDate.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
+    
+    // Get tutor name from populated tutorId
+    const tutorName = booking.tutorId?.userId?.name || booking.tutorId?.name || 'المدرس';
+    
+    // Map backend status to Arabic
+    const statusMap = {
+      'pending': 'قيد الانتظار',
+      'confirmed': 'مؤكدة',
+      'completed': 'مكتملة',
+      'cancelled': 'ملغاة'
+    };
+    const displayStatus = statusMap[booking.status] || booking.status;
+    
+    return (
+      <Card key={booking._id} className="mb-3 shadow-sm border-0">
+        <Card.Body>
+          <Row className="align-items-center">
+            <Col md={6}>
+              <h5 className="fw-bold mb-2">{booking.subject}</h5>
+              <p className="text-muted mb-1">
+                <small>المدرس: {tutorName}</small>
+              </p>
+              <p className="text-muted mb-2">
+                <small>📅 {formattedDate} • ⏰ {formattedTime}</small>
+              </p>
+              <p className="mb-2">
+                <small>⏱️ المدة: {booking.duration} دقيقة</small>
+              </p>
+              <Badge bg={
+                booking.status === 'confirmed' ? 'success' :
+                booking.status === 'pending' ? 'warning' :
+                booking.status === 'completed' ? 'info' : 'danger'
+              }>
+                {displayStatus}
               </Badge>
-            )}
-          </Col>
-          <Col md={3} className="text-center">
-            <div className="fw-bold text-primary fs-4">{booking.price} جنيه</div>
-            {booking.rating && (
-              <div className="mt-2">
-                <Badge bg="warning" text="dark">⭐ {booking.rating}</Badge>
+            </Col>
+            <Col md={3} className="text-center">
+              <div className="fw-bold text-primary fs-4">{booking.totalPrice} جنيه</div>
+              {booking.rating && (
+                <div className="mt-2">
+                  <Badge bg="warning" text="dark">⭐ {booking.rating}</Badge>
+                </div>
+              )}
+            </Col>
+            <Col md={3}>
+              <div className="d-grid gap-2">
+                {booking.status === 'confirmed' && (
+                  <>
+                    <Button variant="primary" size="sm">
+                      🎥 انضم للجلسة
+                    </Button>
+                    <Button 
+                      variant="outline-primary" 
+                      size="sm"
+                      onClick={() => {
+                        setSelectedBooking(booking);
+                        setShowRescheduleModal(true);
+                      }}
+                    >
+                      إعادة جدولة
+                    </Button>
+                    <Button 
+                      variant="outline-danger" 
+                      size="sm"
+                      onClick={() => {
+                        setSelectedBooking(booking);
+                        setShowCancelModal(true);
+                      }}
+                    >
+                      إلغاء
+                    </Button>
+                  </>
+                )}
+                {booking.status === 'pending' && (
+                  <>
+                    <Button variant="outline-primary" size="sm">
+                      في انتظار التأكيد
+                    </Button>
+                    <Button 
+                      variant="outline-danger" 
+                      size="sm"
+                      onClick={() => {
+                        setSelectedBooking(booking);
+                        setShowCancelModal(true);
+                      }}
+                    >
+                      إلغاء
+                    </Button>
+                  </>
+                )}
+                {booking.status === 'completed' && (
+                  <>
+                    <Button variant="outline-primary" size="sm">
+                      عرض التفاصيل
+                    </Button>
+                    <Button variant="outline-success" size="sm">
+                      احجز مرة أخرى
+                    </Button>
+                  </>
+                )}
               </div>
-            )}
-          </Col>
-          <Col md={3}>
-            <div className="d-grid gap-2">
-              {booking.status === 'مؤكدة' && (
-                <>
-                  <Button variant="primary" size="sm">
-                    🎥 انضم للجلسة
-                  </Button>
-                  <Button 
-                    variant="outline-primary" 
-                    size="sm"
-                    onClick={() => {
-                      setSelectedBooking(booking);
-                      setShowRescheduleModal(true);
-                    }}
-                  >
-                    إعادة جدولة
-                  </Button>
-                  <Button 
-                    variant="outline-danger" 
-                    size="sm"
-                    onClick={() => {
-                      setSelectedBooking(booking);
-                      setShowCancelModal(true);
-                    }}
-                  >
-                    إلغاء
-                  </Button>
-                </>
-              )}
-              {booking.status === 'قيد الانتظار' && (
-                <>
-                  <Button 
-                    variant="success" 
-                    size="sm"
-                    onClick={() => handlePayNow(booking)}
-                  >
-                    تأكيد الدفع
-                  </Button>
-                  <Button 
-                    variant="outline-danger" 
-                    size="sm"
-                    onClick={() => {
-                      setSelectedBooking(booking);
-                      setShowCancelModal(true);
-                    }}
-                  >
-                    إلغاء
-                  </Button>
-                </>
-              )}
-              {booking.status === 'مكتملة' && (
-                <>
-                  <Button variant="outline-primary" size="sm">
-                    عرض التفاصيل
-                  </Button>
-                  <Button variant="outline-success" size="sm">
-                    احجز مرة أخرى
-                  </Button>
-                </>
-              )}
-            </div>
-          </Col>
-        </Row>
-      </Card.Body>
-    </Card>
-  );
+            </Col>
+          </Row>
+        </Card.Body>
+      </Card>
+    );
+  };
 
   return (
     <Container className="py-5">
@@ -233,7 +277,7 @@ function BookingManagement() {
           <Card className="border-0 shadow-sm bg-primary text-white">
             <Card.Body>
               <h6>الحجوزات القادمة</h6>
-              <h2 className="fw-bold">{bookings.upcoming.length}</h2>
+              <h2 className="fw-bold">{upcomingBookings.length}</h2>
             </Card.Body>
           </Card>
         </Col>
@@ -241,7 +285,7 @@ function BookingManagement() {
           <Card className="border-0 shadow-sm bg-success text-white">
             <Card.Body>
               <h6>الجلسات المكتملة</h6>
-              <h2 className="fw-bold">{bookings.completed.length}</h2>
+              <h2 className="fw-bold">{completedBookings.length}</h2>
             </Card.Body>
           </Card>
         </Col>
@@ -250,7 +294,7 @@ function BookingManagement() {
             <Card.Body>
               <h6>إجمالي الجلسات</h6>
               <h2 className="fw-bold">
-                {bookings.upcoming.length + bookings.completed.length}
+                {bookings.length}
               </h2>
             </Card.Body>
           </Card>
@@ -261,15 +305,20 @@ function BookingManagement() {
       <Card className="shadow-sm border-0">
         <Card.Body>
           <Tabs activeKey={activeTab} onSelect={setActiveTab} className="mb-4">
-            <Tab eventKey="upcoming" title={`القادمة (${bookings.upcoming.length})`}>
+            <Tab eventKey="upcoming" title={`القادمة (${upcomingBookings.length})`}>
               <div className="py-3">
-                {bookings.upcoming.length > 0 ? (
-                  bookings.upcoming.map(booking => renderBookingCard(booking))
+                {upcomingBookings.length > 0 ? (
+                  upcomingBookings.map(booking => renderBookingCard(booking))
                 ) : (
                   <div className="text-center py-5">
                     <div className="display-4 mb-3">📅</div>
                     <h5>لا توجد حجوزات قادمة</h5>
-                    <Button variant="primary" className="mt-3">
+                    <Button 
+                      as={Link}
+                      to="/student/find-tutors"
+                      variant="primary" 
+                      className="mt-3"
+                    >
                       ابحث عن مدرس
                     </Button>
                   </div>
@@ -277,15 +326,29 @@ function BookingManagement() {
               </div>
             </Tab>
 
-            <Tab eventKey="completed" title={`المكتملة (${bookings.completed.length})`}>
+            <Tab eventKey="completed" title={`المكتملة (${completedBookings.length})`}>
               <div className="py-3">
-                {bookings.completed.map(booking => renderBookingCard(booking))}
+                {completedBookings.length > 0 ? (
+                  completedBookings.map(booking => renderBookingCard(booking))
+                ) : (
+                  <div className="text-center py-5">
+                    <div className="display-4 mb-3">✓</div>
+                    <h5>لا توجد جلسات مكتملة</h5>
+                  </div>
+                )}
               </div>
             </Tab>
 
-            <Tab eventKey="cancelled" title={`الملغاة (${bookings.cancelled.length})`}>
+            <Tab eventKey="cancelled" title={`الملغاة (${cancelledBookings.length})`}>
               <div className="py-3">
-                {bookings.cancelled.map(booking => renderBookingCard(booking))}
+                {cancelledBookings.length > 0 ? (
+                  cancelledBookings.map(booking => renderBookingCard(booking))
+                ) : (
+                  <div className="text-center py-5">
+                    <div className="display-4 mb-3">📭</div>
+                    <h5>لا توجد حجوزات ملغاة</h5>
+                  </div>
+                )}
               </div>
             </Tab>
           </Tabs>

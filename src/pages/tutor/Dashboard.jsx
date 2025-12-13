@@ -1,69 +1,89 @@
+import { useState, useEffect } from 'react';
 import { Container, Row, Col, Card, Button, Badge, Table } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { bookingAPI } from '../../services/backendApi';
 import { FaMoneyBillWave, FaUsers, FaCalendarCheck, FaStar, FaClock, FaChartLine } from 'react-icons/fa';
 
 function TutorDashboard() {
   const { user } = useAuth();
+  const [upcomingSessions, setUpcomingSessions] = useState([]);
+  const [recentRequests, setRecentRequests] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [uniqueStudents, setUniqueStudents] = useState(0);
 
-  // Mock data for demonstration
+  useEffect(() => {
+    fetchDashboardData();
+  }, [user]);
+
+  const fetchDashboardData = async () => {
+    if (!user) return;
+    
+    try {
+      setLoading(true);
+      const bookingsResponse = await bookingAPI.getAllBookings();
+      
+      if (bookingsResponse.success) {
+        const allBookings = bookingsResponse.data || [];
+        
+        // Filter bookings for this tutor
+        const tutorBookings = allBookings.filter(b => 
+          b.tutorId?._id === user.tutorProfile?._id || 
+          b.tutorId === user.tutorProfile?._id
+        );
+        
+        // Get upcoming sessions (confirmed or pending, future dates)
+        const upcoming = tutorBookings
+          .filter(b => {
+            const sessionDate = new Date(b.sessionDate);
+            return (b.status === 'confirmed' || b.status === 'pending') && sessionDate >= new Date();
+          })
+          .sort((a, b) => new Date(a.sessionDate) - new Date(b.sessionDate))
+          .slice(0, 5)
+          .map(b => ({
+            id: b._id,
+            studentName: b.studentId?.name || 'طالب',
+            subject: b.subject,
+            date: new Date(b.sessionDate).toISOString().split('T')[0],
+            time: new Date(b.sessionDate).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }),
+            duration: `${b.duration} ساعة`,
+            price: b.totalPrice,
+            status: b.status
+          }));
+        
+        setUpcomingSessions(upcoming);
+        
+        // Get pending requests
+        const pending = tutorBookings
+          .filter(b => b.status === 'pending')
+          .slice(0, 5)
+          .map(b => ({
+            id: b._id,
+            studentName: b.studentId?.name || 'طالب',
+            subject: b.subject,
+            preferredTime: new Date(b.sessionDate).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }),
+            date: new Date(b.sessionDate).toISOString().split('T')[0],
+            message: b.notes || 'طلب حجز جديد'
+          }));
+        
+        setRecentRequests(pending);
+        
+        // Calculate unique students
+        const studentIds = new Set(tutorBookings.map(b => b.studentId?._id || b.studentId).filter(Boolean));
+        setUniqueStudents(studentIds.size);
+      }
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const stats = [
     { icon: <FaMoneyBillWave />, label: 'إجمالي الأرباح', value: user?.totalEarnings || 0, suffix: ' جنيه', color: 'success' },
-    { icon: <FaUsers />, label: 'عدد الطلاب', value: user?.studentsCount || 0, suffix: ' طالب', color: 'primary' },
-    { icon: <FaCalendarCheck />, label: 'الحصص القادمة', value: 5, suffix: ' حصة', color: 'info' },
+    { icon: <FaUsers />, label: 'عدد الطلاب', value: uniqueStudents, suffix: ' طالب', color: 'primary' },
+    { icon: <FaCalendarCheck />, label: 'الحصص القادمة', value: upcomingSessions.length, suffix: ' حصة', color: 'info' },
     { icon: <FaStar />, label: 'التقييم', value: user?.rating || 0, suffix: ' / 5', color: 'warning' }
-  ];
-
-  const upcomingSessions = [
-    {
-      id: 1,
-      studentName: 'أحمد محمد',
-      subject: 'الرياضيات',
-      date: '2025-11-23',
-      time: '15:00',
-      duration: '2 ساعة',
-      price: 120,
-      status: 'confirmed'
-    },
-    {
-      id: 2,
-      studentName: 'سارة علي',
-      subject: 'الفيزياء',
-      date: '2025-11-24',
-      time: '10:00',
-      duration: '1 ساعة',
-      price: 60,
-      status: 'pending'
-    },
-    {
-      id: 3,
-      studentName: 'محمد حسن',
-      subject: 'الرياضيات',
-      date: '2025-11-25',
-      time: '16:00',
-      duration: '1.5 ساعة',
-      price: 90,
-      status: 'confirmed'
-    }
-  ];
-
-  const recentRequests = [
-    {
-      id: 1,
-      studentName: 'خالد أحمد',
-      subject: 'الفيزياء',
-      preferredTime: 'مساءً 5-7',
-      date: '2025-11-26',
-      message: 'محتاج مساعدة في فهم الحركة الدائرية'
-    },
-    {
-      id: 2,
-      studentName: 'نور محمد',
-      subject: 'الرياضيات',
-      preferredTime: 'صباحاً 10-12',
-      date: '2025-11-27',
-      message: 'أريد مراجعة التفاضل والتكامل'
-    }
   ];
 
   const getStatusBadge = (status) => {
@@ -191,7 +211,21 @@ function TutorDashboard() {
                       </tr>
                     </thead>
                     <tbody>
-                      {upcomingSessions.map((session) => (
+                      {loading ? (
+                        <tr>
+                          <td colSpan="7" className="text-center py-4">
+                            <div className="spinner-border text-primary" role="status">
+                              <span className="visually-hidden">جاري التحميل...</span>
+                            </div>
+                          </td>
+                        </tr>
+                      ) : upcomingSessions.length === 0 ? (
+                        <tr>
+                          <td colSpan="7" className="text-center py-4 text-muted">
+                            لا توجد حصص قادمة
+                          </td>
+                        </tr>
+                      ) : upcomingSessions.map((session) => (
                         <tr key={session.id}>
                           <td className="fw-bold">{session.studentName}</td>
                           <td>{session.subject}</td>

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Container, Card, Form, Button, Alert, Tabs, Tab } from 'react-bootstrap';
+import { Container, Card, Form, Button, Alert, Tabs, Tab, Spinner } from 'react-bootstrap';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { FaEnvelope, FaPhone, FaLock } from 'react-icons/fa';
@@ -11,48 +11,56 @@ function Login() {
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setIsLoading(true);
 
     const identifier = activeTab === 'email' ? email : phone;
     
     if (!identifier || !password) {
       setError('يرجى ملء جميع الحقول');
+      setIsLoading(false);
       return;
     }
 
     // Validate email format
     if (activeTab === 'email' && !isValidEmail(email)) {
       setError('البريد الإلكتروني غير صحيح');
+      setIsLoading(false);
       return;
     }
 
-    // Validate Egyptian phone number format
+    // Validate Egyptian phone number format (currently backend uses email only)
     if (activeTab === 'phone' && !isValidPhone(phone)) {
       setError('رقم الهاتف غير صحيح. يجب أن يبدأ بـ 010 أو 011 أو 012 أو 015 ويتكون من 11 رقم');
+      setIsLoading(false);
       return;
     }
 
-    const result = login(identifier, password, activeTab);
-    
-    if (result.success) {
-      // Get current user to check role
-      const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+    try {
+      const result = await login(identifier, password);
       
-      // Redirect based on user role
-      if (currentUser.role === 'admin') {
-        navigate('/admin/dashboard');
-      } else if (currentUser.role === 'tutor') {
-        navigate('/tutor/dashboard');
+      if (result.success && result.user) {
+        // Redirect based on user role
+        if (result.user.role === 'admin') {
+          navigate('/admin/dashboard');
+        } else if (result.user.role === 'tutor') {
+          navigate('/tutor/dashboard');
+        } else {
+          navigate('/student/dashboard');
+        }
       } else {
-        navigate('/student/dashboard');
+        setError(result.message || 'بيانات الدخول غير صحيحة');
       }
-    } else {
-      setError('بيانات الدخول غير صحيحة');
+    } catch (error) {
+      setError('حدث خطأ في الاتصال بالخادم');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -113,8 +121,20 @@ function Login() {
                       </div>
                     </Form.Group>
 
-                    <Button variant="primary" type="submit" className="w-100 py-2 mb-3">
-                      تسجيل الدخول
+                    <Button 
+                      variant="primary" 
+                      type="submit" 
+                      className="w-100 py-2 mb-3"
+                      disabled={isLoading}
+                    >
+                      {isLoading ? (
+                        <>
+                          <Spinner animation="border" size="sm" className="me-2" />
+                          جاري تسجيل الدخول...
+                        </>
+                      ) : (
+                        'تسجيل الدخول'
+                      )}
                     </Button>
                   </Form>
                 </Tab>
@@ -165,8 +185,20 @@ function Login() {
                       </div>
                     </Form.Group>
 
-                    <Button variant="primary" type="submit" className="w-100 py-2 mb-3">
-                      تسجيل الدخول
+                    <Button 
+                      variant="primary" 
+                      type="submit" 
+                      className="w-100 py-2 mb-3"
+                      disabled={isLoading}
+                    >
+                      {isLoading ? (
+                        <>
+                          <Spinner animation="border" size="sm" className="me-2" />
+                          جاري تسجيل الدخول...
+                        </>
+                      ) : (
+                        'تسجيل الدخول'
+                      )}
                     </Button>
                   </Form>
                 </Tab>

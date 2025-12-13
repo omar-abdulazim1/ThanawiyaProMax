@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react';
-import { Container, Row, Col, Card, Form, Button, Badge } from 'react-bootstrap';
+import { Container, Row, Col, Card, Form, Button, Badge, Spinner } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
 import { toast } from 'react-toastify';
+import { tutorAPI, userAPI, getCurrentUserData } from '../../services/backendApi';
 
 function FindTutors() {
+  const [tutors, setTutors] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({
     subject: '',
     minPrice: '',
@@ -12,130 +15,72 @@ function FindTutors() {
     availability: ''
   });
   const [favorites, setFavorites] = useState([]);
+  const currentUser = getCurrentUserData();
 
-  // Load favorites from localStorage on mount
+  // Load tutors and favorites from API
   useEffect(() => {
-    const currentUser = JSON.parse(localStorage.getItem('currentUser'));
-    if (currentUser && currentUser.role === 'student') {
-      const users = JSON.parse(localStorage.getItem('users') || '[]');
-      const user = users.find(u => u.id === currentUser.id);
-      if (user && user.favoritesTutors) {
-        setFavorites(user.favoritesTutors);
+    const fetchTutors = async () => {
+      try {
+        setLoading(true);
+        const response = await tutorAPI.getAllTutors({
+          subjects: filters.subject,
+          minRate: filters.minPrice,
+          maxRate: filters.maxPrice,
+          minRating: filters.rating
+        });
+        if (response.success) {
+          setTutors(response.data);
+          if (currentUser && currentUser.favoritesTutors) {
+            setFavorites(currentUser.favoritesTutors);
+          }
+        }
+      } catch (error) {
+        toast.error('فشل تحميل المدرسين');
+      } finally {
+        setLoading(false);
       }
-    }
-  }, []);
+    };
+    fetchTutors();
+  }, [filters.subject, filters.minPrice, filters.maxPrice, filters.rating]);
 
   // Toggle favorite
-  const toggleFavorite = (tutorId) => {
-    const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+  const toggleFavorite = async (tutorUserId) => {
     if (!currentUser || currentUser.role !== 'student') {
       toast.error('يجب تسجيل الدخول كطالب لإضافة المدرسين للمفضلة');
       return;
     }
 
-    const users = JSON.parse(localStorage.getItem('users') || '[]');
-    const userIndex = users.findIndex(u => u.id === currentUser.id);
-    
-    if (userIndex === -1) return;
-
-    const user = users[userIndex];
-    let updatedFavorites = user.favoritesTutors || [];
-    
-    if (updatedFavorites.includes(String(tutorId))) {
-      // Remove from favorites
-      updatedFavorites = updatedFavorites.filter(id => id !== String(tutorId));
-      toast.success('تم إزالة المدرس من المفضلة');
-    } else {
-      // Add to favorites
-      updatedFavorites.push(String(tutorId));
-      toast.success('تم إضافة المدرس للمفضلة');
+    try {
+      if (favorites.includes(tutorUserId)) {
+        // Remove from favorites
+        await userAPI.removeFavorite(currentUser._id, tutorUserId);
+        setFavorites(favorites.filter(id => id !== tutorUserId));
+        toast.success('تم إزالة المدرس من المفضلة');
+      } else {
+        // Add to favorites
+        await userAPI.addFavorite(currentUser._id, tutorUserId);
+        setFavorites([...favorites, tutorUserId]);
+        toast.success('تم إضافة المدرس للمفضلة');
+      }
+    } catch (error) {
+      toast.error('فشل تحديث المفضلة');
     }
-
-    users[userIndex] = { ...user, favoritesTutors: updatedFavorites };
-    localStorage.setItem('users', JSON.stringify(users));
-    setFavorites(updatedFavorites);
   };
-
-  const tutors = [
-    {
-      id: 1,
-      name: 'محمد أحمد علي',
-      subjects: ['الرياضيات', 'الفيزياء'],
-      rating: 4.9,
-      price: 150,
-      totalSessions: 120,
-      university: 'جامعة القاهرة - كلية الهندسة',
-      availability: 'متاح اليوم',
-      image: '👨‍🏫'
-    },
-    {
-      id: 2,
-      name: 'سارة محمود حسن',
-      subjects: ['الكيمياء', 'الأحياء'],
-      rating: 4.8,
-      price: 130,
-      totalSessions: 95,
-      university: 'جامعة عين شمس - كلية الطب',
-      availability: 'متاح غداً',
-      image: '👩‍🏫'
-    },
-    {
-      id: 3,
-      name: 'أحمد حسن محمد',
-      subjects: ['اللغة الإنجليزية'],
-      rating: 4.7,
-      price: 120,
-      totalSessions: 80,
-      university: 'الجامعة الأمريكية - كلية الآداب',
-      availability: 'متاح اليوم',
-      image: '👨‍🎓'
-    },
-    {
-      id: 4,
-      name: 'فاطمة علي أحمد',
-      subjects: ['اللغة العربية', 'التاريخ'],
-      rating: 4.9,
-      price: 110,
-      totalSessions: 150,
-      university: 'جامعة القاهرة - كلية الآداب',
-      availability: 'متاح بعد غد',
-      image: '👩‍🎓'
-    },
-    {
-      id: 5,
-      name: 'عمر محمد سعيد',
-      subjects: ['الرياضيات'],
-      rating: 4.6,
-      price: 140,
-      totalSessions: 65,
-      university: 'جامعة الإسكندرية - كلية العلوم',
-      availability: 'متاح اليوم',
-      image: '👨‍🏫'
-    },
-    {
-      id: 6,
-      name: 'نور الدين أحمد',
-      subjects: ['الفيزياء', 'الرياضيات'],
-      rating: 4.8,
-      price: 160,
-      totalSessions: 110,
-      university: 'جامعة القاهرة - كلية الهندسة',
-      availability: 'متاح غداً',
-      image: '👨‍🔬'
-    }
-  ];
 
   const handleFilterChange = (e) => {
     setFilters({ ...filters, [e.target.name]: e.target.value });
   };
 
-  const filteredTutors = tutors.filter(tutor => {
-    if (filters.subject && !tutor.subjects.includes(filters.subject)) return false;
-    if (filters.minPrice && tutor.price < parseInt(filters.minPrice)) return false;
-    if (filters.maxPrice && tutor.price > parseInt(filters.maxPrice)) return false;
-    if (filters.rating && tutor.rating < parseFloat(filters.rating)) return false;
-    return true;
-  });
+  if (loading) {
+    return (
+      <Container className="py-5 text-center">
+        <Spinner animation="border" role="status">
+          <span className="visually-hidden">Loading...</span>
+        </Spinner>
+        <p className="mt-3">جاري تحميل المدرسين...</p>
+      </Container>
+    );
+  }
 
   return (
     <Container className="py-5">
@@ -143,7 +88,7 @@ function FindTutors() {
         <Row className="mb-4">
           <Col>
             <h1 id="find-tutors-title" className="fw-bold">ابحث عن مدرسك الجامعي المثالي</h1>
-            <p className="text-muted">استعرض {tutors.length} طالب جامعي متاح للتدريس - أسعار مخفضة تبدأ من 100 جنيه/ساعة</p>
+            <p className="text-muted">استعرض {tutors.length} مدرس متاح للتدريس</p>
           </Col>
         </Row>
 
@@ -233,56 +178,56 @@ function FindTutors() {
           {/* Tutors Grid */}
           <Col lg={9}>
             <div role="status" className="visually-hidden" aria-live="polite">
-              تم العثور على {filteredTutors.length} مدرس
+              تم العثور على {tutors.length} مدرس
             </div>
             <Row className="g-4">
-              {filteredTutors.map(tutor => (
-                <Col md={6} key={tutor.id}>
+              {tutors.map(tutor => (
+                <Col md={6} key={tutor._id}>
                   <article className="h-100">
                     <Card className="h-100 shadow-sm border-0 hover-shadow">
                       <Card.Body>
                         <div className="d-flex align-items-start mb-3">
-                          <div className="fs-1 me-3" aria-hidden="true">{tutor.image}</div>
+                          <div className="fs-1 me-3" aria-hidden="true">👨‍🏫</div>
                           <div className="flex-grow-1">
-                            <h3 className="h5 fw-bold mb-1">{tutor.name}</h3>
+                            <h3 className="h5 fw-bold mb-1">{tutor.userId?.name || 'المدرس'}</h3>
                             <p className="text-muted small mb-2">{tutor.university}</p>
                             <div className="d-flex align-items-center gap-2 mb-2">
                               <span className="badge bg-warning text-dark" aria-label={`التقييم ${tutor.rating} من 5`}>
-                                <span aria-hidden="true">⭐</span> {tutor.rating}
+                                <span aria-hidden="true">⭐</span> {tutor.rating || 0}
                               </span>
                               <span className="text-muted small">
-                                ({tutor.totalSessions} جلسة)
+                                ({tutor.completedSessions || 0} جلسة)
                               </span>
                             </div>
                           </div>
                           <Button 
                             variant="link" 
-                            className={`p-0 ${favorites.includes(String(tutor.id)) ? 'text-danger' : 'text-muted'}`}
+                            className={`p-0 ${favorites.includes(tutor.userId?._id) ? 'text-danger' : 'text-muted'}`}
                             onClick={(e) => {
                               e.preventDefault();
-                              toggleFavorite(tutor.id);
+                              toggleFavorite(tutor.userId?._id);
                             }}
-                            aria-label={`${favorites.includes(String(tutor.id)) ? 'إزالة' : 'إضافة'} ${tutor.name} ${favorites.includes(String(tutor.id)) ? 'من' : 'إلى'} المفضلة`}
+                            aria-label={`${favorites.includes(tutor.userId?._id) ? 'إزالة' : 'إضافة'} ${tutor.userId?.name} ${favorites.includes(tutor.userId?._id) ? 'من' : 'إلى'} المفضلة`}
                             style={{ fontSize: '1.5rem' }}
                           >
-                            <span aria-hidden="true">{favorites.includes(String(tutor.id)) ? '❤️' : '🤍'}</span>
+                            <span aria-hidden="true">{favorites.includes(tutor.userId?._id) ? '❤️' : '🤍'}</span>
                           </Button>
                         </div>
 
                         <div className="mb-3">
                           <div className="d-flex flex-wrap gap-1 mb-2" role="list" aria-label="المواد التي يدرسها">
-                            {tutor.subjects.map((subject, idx) => (
+                            {tutor.teachingSubjects?.map((subject, idx) => (
                               <Badge key={idx} bg="light" text="dark" className="border" role="listitem">
                                 {subject}
                               </Badge>
                             ))}
                           </div>
                           <div className="d-flex justify-content-between align-items-center">
-                            <span className="fw-bold text-primary fs-5" aria-label={`السعر ${tutor.price} جنيه للساعة`}>
-                              {tutor.price} جنيه/ساعة
+                            <span className="fw-bold text-primary fs-5" aria-label={`السعر ${tutor.hourlyRate} جنيه للساعة`}>
+                              {tutor.hourlyRate} جنيه/ساعة
                             </span>
                             <span className="badge bg-success">
-                              {tutor.availability}
+                              متاح
                             </span>
                           </div>
                         </div>
@@ -290,9 +235,9 @@ function FindTutors() {
                         <div className="d-grid gap-2">
                           <Button 
                             as={Link} 
-                            to={`/student/tutor/${tutor.id}`} 
+                            to={`/student/tutor/${tutor._id}`} 
                             variant="primary"
-                            aria-label={`عرض الملف الشخصي لـ ${tutor.name}`}
+                            aria-label={`عرض الملف الشخصي لـ ${tutor.userId?.name}`}
                           >
                             عرض الملف الشخصي
                           </Button>
@@ -304,7 +249,7 @@ function FindTutors() {
               ))}
             </Row>
 
-            {filteredTutors.length === 0 && (
+            {tutors.length === 0 && (
               <Card className="text-center py-5">
                 <Card.Body role="status">
                   <div className="display-1 mb-3" aria-hidden="true">🔍</div>

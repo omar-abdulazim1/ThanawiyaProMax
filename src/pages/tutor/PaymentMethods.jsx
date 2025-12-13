@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Container, Row, Col, Card, Form, Button, Alert, Badge, Modal } from 'react-bootstrap';
-import { FaWallet, FaMobileAlt, FaUniversity, FaPlus, FaEdit, FaTrash, FaCheckCircle } from 'react-icons/fa';
+import { FaWallet, FaMobileAlt, FaUniversity, FaPlus, FaEdit, FaTrash, FaCheckCircle, FaMoneyBillWave } from 'react-icons/fa';
 
 function TutorPaymentMethods() {
   const [paymentMethods, setPaymentMethods] = useState([
@@ -30,7 +30,8 @@ function TutorPaymentMethods() {
   const paymentTypes = [
     { value: 'instapay', label: 'إنستاباي', icon: <FaMobileAlt />, color: 'primary' },
     { value: 'vodafone', label: 'فودافون كاش', icon: <FaMobileAlt />, color: 'danger' },
-    { value: 'bank', label: 'حساب بنكي', icon: <FaUniversity />, color: 'success' }
+    { value: 'bank', label: 'حساب بنكي', icon: <FaUniversity />, color: 'info' },
+    { value: 'fawry', label: 'فوري', icon: <FaMoneyBillWave />, color: 'warning' }
   ];
 
   const handleChange = (e) => {
@@ -73,7 +74,24 @@ function TutorPaymentMethods() {
     setError('');
 
     // Validation
-    if (formData.type === 'instapay' || formData.type === 'vodafone') {
+    if (formData.type === 'instapay') {
+      if (!formData.phoneNumber) {
+        setError('يرجى إدخال رقم الهاتف أو عنوان إنستاباي');
+        return;
+      }
+      // Check if it's a phone number or instapay address
+      const isPhoneNumber = /^01[0-2,5]{1}[0-9]{8}$/.test(formData.phoneNumber);
+      const isInstapayAddress = /@instapay$/i.test(formData.phoneNumber);
+      
+      if (!isPhoneNumber && !isInstapayAddress) {
+        setError('رقم الهاتف غير صحيح أو عنوان إنستاباي غير صحيح. أدخل رقم (010/011/012/015) أو عنوان مثل yourname@instapay');
+        return;
+      }
+      if (!formData.accountName || formData.accountName.length < 3) {
+        setError('اسم صاحب الحساب يجب أن يكون 3 أحرف على الأقل');
+        return;
+      }
+    } else if (formData.type === 'vodafone') {
       if (!formData.phoneNumber || !/^01[0-2,5]{1}[0-9]{8}$/.test(formData.phoneNumber)) {
         setError('رقم الهاتف غير صحيح. يجب أن يبدأ بـ 010 أو 011 أو 012 أو 015 ويتكون من 11 رقم');
         return;
@@ -85,6 +103,15 @@ function TutorPaymentMethods() {
     } else if (formData.type === 'bank') {
       if (!formData.bankName || !formData.accountNumber || !formData.iban) {
         setError('يرجى ملء جميع بيانات الحساب البنكي');
+        return;
+      }
+    } else if (formData.type === 'fawry') {
+      if (!formData.phoneNumber || !/^01[0-2,5]{1}[0-9]{8}$/.test(formData.phoneNumber)) {
+        setError('رقم الهاتف غير صحيح. يجب أن يبدأ بـ 010 أو 011 أو 012 أو 015 ويتكون من 11 رقم');
+        return;
+      }
+      if (!formData.accountName || formData.accountName.length < 3) {
+        setError('اسم صاحب الحساب يجب أن يكون 3 أحرف على الأقل');
         return;
       }
     }
@@ -318,21 +345,24 @@ function TutorPaymentMethods() {
                 </Form.Group>
 
                 <Form.Group className="mb-3">
-                  <Form.Label>رقم الهاتف</Form.Label>
+                  <Form.Label>
+                    {formData.type === 'instapay' ? 'رقم الهاتف أو عنوان إنستاباي' : 'رقم الهاتف'}
+                  </Form.Label>
                   <Form.Control
-                    type="tel"
+                    type="text"
                     name="phoneNumber"
                     value={formData.phoneNumber}
                     onChange={handleChange}
-                    placeholder="مثال: 01012345678"
-                    pattern="01[0-2,5]{1}[0-9]{8}"
-                    maxLength="11"
+                    placeholder={formData.type === 'instapay' ? 'مثال: 01012345678 أو yourname@instapay' : 'مثال: 01012345678'}
                     required
                     dir="ltr"
                     style={{ textAlign: 'right' }}
                   />
                   <Form.Text className="text-muted d-block">
-                    رقم مصري يبدأ بـ 010، 011، 012، أو 015
+                    {formData.type === 'instapay' 
+                      ? 'رقم مصري (010/011/012/015) أو عنوان إنستاباي (yourname@instapay)'
+                      : 'رقم مصري يبدأ بـ 010، 011، 012، أو 015'
+                    }
                   </Form.Text>
                 </Form.Group>
               </>
@@ -400,6 +430,48 @@ function TutorPaymentMethods() {
                     style={{ textAlign: 'right' }}
                   />
                 </Form.Group>
+              </>
+            )}
+
+            {formData.type === 'fawry' && (
+              <>
+                <Form.Group className="mb-3">
+                  <Form.Label>اسم صاحب الحساب</Form.Label>
+                  <Form.Control
+                    type="text"
+                    name="accountName"
+                    value={formData.accountName}
+                    onChange={handleChange}
+                    placeholder="أدخل الاسم الكامل"
+                    required
+                    minLength="3"
+                  />
+                </Form.Group>
+
+                <Form.Group className="mb-3">
+                  <Form.Label>رقم الهاتف المسجل في فوري</Form.Label>
+                  <Form.Control
+                    type="tel"
+                    name="phoneNumber"
+                    value={formData.phoneNumber}
+                    onChange={handleChange}
+                    placeholder="مثال: 01012345678"
+                    pattern="01[0-2,5]{1}[0-9]{8}"
+                    maxLength="11"
+                    required
+                    dir="ltr"
+                    style={{ textAlign: 'right' }}
+                  />
+                  <Form.Text className="text-muted d-block">
+                    الرقم المسجل في حسابك على فوري
+                  </Form.Text>
+                </Form.Group>
+
+                <Alert variant="info" className="mb-0">
+                  <small>
+                    💡 تأكد أن رقم الهاتف مسجل في حساب فوري الخاص بك. سيتم إرسال الأرباح إلى هذا الرقم.
+                  </small>
+                </Alert>
               </>
             )}
           </Modal.Body>

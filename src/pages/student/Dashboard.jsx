@@ -1,42 +1,75 @@
-import { Container, Row, Col, Card, Button } from 'react-bootstrap';
+import { useState, useEffect } from 'react';
+import { Container, Row, Col, Card, Button, Spinner } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { bookingAPI } from '../../services/backendApi';
 
 function Dashboard() {
   const { user } = useAuth();
+  const [upcomingSessions, setUpcomingSessions] = useState([]);
+  const [stats, setStats] = useState({
+    upcoming: 0,
+    favorites: 0,
+    completed: 0,
+    balance: 0
+  });
+  const [loading, setLoading] = useState(true);
 
-  const stats = [
-    { title: 'الجلسات القادمة', value: '3', icon: '📅', color: 'primary' },
-    { title: 'المدرسين الجامعيين المفضلين', value: '5', icon: '⭐', color: 'warning' },
-    { title: 'الجلسات المكتملة', value: '12', icon: '✓', color: 'success' },
-    { title: 'الرصيد المتاح', value: '500 جنيه', icon: '💰', color: 'info' }
-  ];
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
 
-  const upcomingSessions = [
-    {
-      id: 1,
-      tutor: 'محمد أحمد',
-      subject: 'الرياضيات',
-      date: '2025-11-22',
-      time: '4:00 م',
-      status: 'مؤكدة'
-    },
-    {
-      id: 2,
-      tutor: 'سارة علي',
-      subject: 'الفيزياء',
-      date: '2025-11-23',
-      time: '6:00 م',
-      status: 'قيد الانتظار'
-    },
-    {
-      id: 3,
-      tutor: 'أحمد حسن',
-      subject: 'الكيمياء',
-      date: '2025-11-24',
-      time: '5:00 م',
-      status: 'مؤكدة'
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true);
+      // Fetch bookings
+      const bookingsResponse = await bookingAPI.getAllBookings();
+      if (bookingsResponse.success) {
+        const allBookings = bookingsResponse.data;
+        
+        // Filter upcoming bookings (pending or confirmed)
+        const upcoming = allBookings.filter(b => 
+          (b.status === 'pending' || b.status === 'confirmed') &&
+          new Date(b.sessionDate) > new Date()
+        );
+        
+        // Filter completed bookings
+        const completed = allBookings.filter(b => b.status === 'completed');
+        
+        // Set upcoming sessions (limit to 3 for dashboard)
+        setUpcomingSessions(upcoming.slice(0, 3));
+        
+        // Set stats
+        setStats({
+          upcoming: upcoming.length,
+          favorites: user?.favoritesTutors?.length || 0,
+          completed: completed.length,
+          balance: user?.balance || 0
+        });
+      }
+    } catch (error) {
+      console.error('Failed to fetch dashboard data:', error);
+    } finally {
+      setLoading(false);
     }
+  };
+
+  if (loading) {
+    return (
+      <Container className="py-5 text-center">
+        <Spinner animation="border" role="status">
+          <span className="visually-hidden">Loading...</span>
+        </Spinner>
+        <p className="mt-3">جاري تحميل لوحة التحكم...</p>
+      </Container>
+    );
+  }
+
+  const statsData = [
+    { title: 'الجلسات القادمة', value: stats.upcoming, icon: '📅', color: 'primary' },
+    { title: 'المدرسين الجامعيين المفضلين', value: stats.favorites, icon: '⭐', color: 'warning' },
+    { title: 'الجلسات المكتملة', value: stats.completed, icon: '✓', color: 'success' },
+    { title: 'الرصيد المتاح', value: `${stats.balance} جنيه`, icon: '💰', color: 'info' }
   ];
 
   return (
@@ -51,7 +84,7 @@ function Dashboard() {
 
         {/* Stats Cards */}
         <Row className="g-4 mb-5" role="region" aria-label="إحصائيات سريعة">
-          {stats.map((stat, index) => (
+          {statsData.map((stat, index) => (
             <Col md={6} lg={3} key={index}>
               <Card className={`border-0 shadow-sm h-100 border-start border-5 border-${stat.color}`}>
                 <Card.Body>
@@ -95,34 +128,48 @@ function Dashboard() {
                   </Button>
                 </div>
               ) : (
-                upcomingSessions.map(session => (
-                  <article key={session.id} className="border-bottom py-3">
-                    <Row className="align-items-center">
-                      <Col md={8}>
-                        <h3 className="h6 fw-bold mb-1">{session.subject}</h3>
-                        <p className="text-muted mb-1">
-                          <small>المدرس: {session.tutor}</small>
-                        </p>
-                        <p className="text-muted mb-0">
-                          <small>
-                            <time dateTime={session.date}>📅 {session.date}</time> • 
-                            <time>⏰ {session.time}</time>
-                          </small>
-                        </p>
-                      </Col>
-                      <Col md={4} className="text-end">
-                        <span className={`badge bg-${session.status === 'مؤكدة' ? 'success' : 'warning'} mb-2`}>
-                          {session.status}
-                        </span>
-                        <div className="mt-2">
-                          <Button size="sm" variant="primary" aria-label={`انضم إلى جلسة ${session.subject} مع ${session.tutor}`}>
-                            انضم
-                          </Button>
-                        </div>
-                      </Col>
-                    </Row>
-                  </article>
-                ))
+                upcomingSessions.map(session => {
+                  const sessionDate = new Date(session.sessionDate);
+                  const formattedDate = sessionDate.toLocaleDateString('ar-EG');
+                  const formattedTime = sessionDate.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
+                  const tutorName = session.tutorId?.userId?.name || session.tutorId?.name || 'المدرس';
+                  const statusMap = {
+                    'pending': 'قيد الانتظار',
+                    'confirmed': 'مؤكدة',
+                    'completed': 'مكتملة',
+                    'cancelled': 'ملغاة'
+                  };
+                  const displayStatus = statusMap[session.status] || session.status;
+                  
+                  return (
+                    <article key={session._id} className="border-bottom py-3">
+                      <Row className="align-items-center">
+                        <Col md={8}>
+                          <h3 className="h6 fw-bold mb-1">{session.subject}</h3>
+                          <p className="text-muted mb-1">
+                            <small>المدرس: {tutorName}</small>
+                          </p>
+                          <p className="text-muted mb-0">
+                            <small>
+                              <time dateTime={session.sessionDate}>📅 {formattedDate}</time> • 
+                              <time>⏰ {formattedTime}</time>
+                            </small>
+                          </p>
+                        </Col>
+                        <Col md={4} className="text-end">
+                          <span className={`badge bg-${session.status === 'confirmed' ? 'success' : 'warning'} mb-2`}>
+                            {displayStatus}
+                          </span>
+                          <div className="mt-2">
+                            <Button size="sm" variant="primary" aria-label={`انضم إلى جلسة ${session.subject} مع ${tutorName}`}>
+                              انضم
+                            </Button>
+                          </div>
+                        </Col>
+                      </Row>
+                    </article>
+                  );
+                })
               )}
             </Card.Body>
           </Card>

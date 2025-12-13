@@ -1,18 +1,22 @@
-# ThanawyiaPro (ثانوية برو) 🎓
+# ThanawiyaPro (ثانوية برو) 🎓
 
-[![React](https://img.shields.io/badge/React-18.3.1-blue.svg)](https://react.dev)
-[![Vite](https://img.shields.io/badge/Vite-6.0.7-purple.svg)](https://vitejs.dev)
-[![Bootstrap](https://img.shields.io/badge/Bootstrap-5.3.8-purple.svg)](https://getbootstrap.com)
-[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![React](https://img.shields.io/badge/React-18.3.1-61DAFB?logo=react)](https://react.dev)
+[![Node.js](https://img.shields.io/badge/Node.js-22.12.0-339933?logo=node.js)](https://nodejs.org)
+[![Express](https://img.shields.io/badge/Express-4.18.2-000000?logo=express)](https://expressjs.com)
+[![MongoDB](https://img.shields.io/badge/MongoDB-8.0-47A248?logo=mongodb)](https://www.mongodb.com)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-**منصة تعليمية تربط طلاب الجامعة بطلاب الثانوية العامة لتوفير دروس خصوصية بأسعار معقولة**
+**منصة تعليمية متكاملة تربط طلاب الجامعة بطلاب الثانوية العامة لتوفير دروس خصوصية بأسعار معقولة**
 
-A modern educational platform connecting university students with high school students to provide affordable private tutoring services.
+A comprehensive educational platform connecting university students with high school students to provide affordable private tutoring services. Built with MERN stack (MongoDB, Express.js, React, Node.js).
 
 ---
 
 ## 📑 Table of Contents
+
+- [Overview](#-overview)
 - [Quick Start](#-quick-start)
+- [System Architecture](#-system-architecture)
 - [Demo Accounts](#-demo-accounts--testing)
 - [Key Features](#-key-features)
 - [Application Pages](#-application-pages)
@@ -36,15 +40,290 @@ A modern educational platform connecting university students with high school st
 git clone https://github.com/ibrasonic/thanawiyapro.git
 cd thanawiyapro
 
-# Install dependencies
+# Install frontend dependencies
 npm install
 
-# Run development server
+# Install backend dependencies
+cd backend
+npm install
+cd ..
+
+# Start MongoDB (make sure MongoDB is installed)
+mongod
+
+# Run backend server (in one terminal)
+cd backend
+npm start
+
+# Run frontend development server (in another terminal)
 npm run dev
 
 # Open browser at
 http://localhost:5173
+# Backend API: http://localhost:5000
 ```
+
+---
+
+## 🏗️ Backend Architecture
+
+### System Overview
+ThanawyiaPro uses a **MERN Stack** architecture with a RESTful API design:
+
+```
+┌─────────────────┐
+│  React Frontend │ ← Vite Development Server (Port 5173)
+│   (Client SPA)  │
+└────────┬────────┘
+         │ HTTP/HTTPS
+         │ Axios Requests
+         ↓
+┌─────────────────┐
+│  Express.js API │ ← Node.js Server (Port 5000)
+│   (REST API)    │
+└────────┬────────┘
+         │ Mongoose ODM
+         │ MongoDB Driver
+         ↓
+┌─────────────────┐
+│  MongoDB        │ ← NoSQL Database (Port 27017)
+│  (thanawiyapro) │
+└─────────────────┘
+```
+
+### Backend Structure
+
+```
+backend/
+├── config/
+│   └── db.js                 # MongoDB connection configuration
+├── controllers/
+│   ├── authController.js     # Authentication logic (register, login, getMe)
+│   ├── userController.js     # User CRUD operations
+│   ├── tutorController.js    # Tutor management & approval
+│   ├── bookingController.js  # Booking creation & management
+│   └── paymentController.js  # Payment processing & approval
+├── middleware/
+│   ├── authMiddleware.js     # JWT verification & role-based access
+│   ├── errorHandler.js       # Global error handling
+│   └── validators.js         # Input validation middleware
+├── models/
+│   ├── User.js               # User schema (students, admins)
+│   ├── Tutor.js              # Tutor profile schema
+│   ├── Booking.js            # Session booking schema
+│   └── Payment.js            # Payment transaction schema
+├── routes/
+│   ├── authRoutes.js         # /api/auth/* endpoints
+│   ├── userRoutes.js         # /api/users/* endpoints
+│   ├── tutorRoutes.js        # /api/tutors/* endpoints
+│   ├── bookingRoutes.js      # /api/bookings/* endpoints
+│   └── paymentRoutes.js      # /api/payments/* endpoints
+├── utils/
+│   └── asyncHandler.js       # Async error wrapper
+├── .env                      # Environment variables
+├── package.json              # Backend dependencies
+└── server.js                 # Application entry point
+```
+
+### Key Features
+
+#### 🔐 Authentication System
+- **JWT-based authentication** with token expiration
+- Password hashing using **bcrypt** (10 rounds)
+- Role-based access control (student, tutor, admin)
+- Protected routes with middleware
+- Token stored in localStorage (frontend)
+
+#### 📊 Database Models
+
+**User Model** (`users` collection)
+- Authentication fields (email, phone, password, role)
+- Profile information (name, avatar, balance)
+- Role: student or admin
+- Timestamps (createdAt, updatedAt)
+
+**Tutor Model** (`tutors` collection)
+- References User model (userId)
+- Academic info (university, major, year, GPA)
+- Teaching details (subjects, hourlyRate, bio)
+- Availability schedule
+- Approval status (pending, approved, rejected)
+- Statistics (rating, totalEarnings, studentsCount)
+
+**Booking Model** (`bookings` collection)
+- References User and Tutor
+- Session details (subject, date, duration, price)
+- Status (pending, confirmed, completed, cancelled)
+- Notes and feedback
+
+**Payment Model** (`payments` collection)
+- References User
+- Type (deposit, withdrawal, booking, refund)
+- Method (wallet, instapay, vodafone, bank, fawry)
+- Amount and transaction details
+- Status (pending, completed, failed, cancelled, rejected)
+- Transaction proof and rejection reason
+
+#### 🛡️ Security Features
+- **Password encryption** with bcrypt
+- **JWT token validation** on protected routes
+- **Input sanitization** and validation
+- **CORS configuration** for frontend origin
+- **Error handling** with custom error classes
+- **Rate limiting** (can be added)
+- **SQL injection prevention** (using Mongoose)
+
+#### 📡 API Design
+- **RESTful architecture** with proper HTTP methods
+- **JSON responses** with consistent structure
+- **Status codes**: 200 (success), 201 (created), 400 (bad request), 401 (unauthorized), 404 (not found), 500 (server error)
+- **Error messages** in Arabic and English
+- **Pagination** support (can be added)
+- **Filtering and sorting** support
+
+---
+
+## ⚙️ Environment Setup
+
+### Prerequisites
+- **Node.js** v16+ (recommended v22.12.0)
+- **MongoDB** v6+ (local or MongoDB Atlas)
+- **npm** or **yarn**
+- **Git**
+
+### Backend Environment Variables
+
+Create a `.env` file in the `backend/` directory:
+
+```env
+# Server Configuration
+NODE_ENV=development
+PORT=5000
+
+# Database Configuration
+MONGO_URI=mongodb://127.0.0.1:27017/thanawiyapro
+# Or use MongoDB Atlas:
+# MONGO_URI=mongodb+srv://username:password@cluster.mongodb.net/thanawiyapro
+
+# JWT Configuration
+JWT_SECRET=your_super_secret_jwt_key_here_change_in_production
+JWT_EXPIRE=7d
+
+# CORS Configuration
+CLIENT_URL=http://localhost:5173
+
+# Optional: Email Configuration (for future use)
+# SMTP_HOST=smtp.gmail.com
+# SMTP_PORT=587
+# SMTP_USER=your-email@gmail.com
+# SMTP_PASS=your-app-password
+
+# Optional: Payment Gateway (for future use)
+# FAWRY_MERCHANT_CODE=your_merchant_code
+# FAWRY_SECRET_KEY=your_secret_key
+```
+
+### Database Setup
+
+1. **Install MongoDB:**
+   - Windows: Download from [mongodb.com](https://www.mongodb.com/try/download/community)
+   - Mac: `brew install mongodb-community`
+   - Linux: Follow [official guide](https://docs.mongodb.com/manual/administration/install-on-linux/)
+
+2. **Start MongoDB:**
+   ```bash
+   # Windows (as service)
+   net start MongoDB
+   
+   # Mac/Linux
+   mongod --dbpath /usr/local/var/mongodb
+   
+   # Or use MongoDB Compass GUI
+   ```
+
+3. **Create Database:**
+   ```bash
+   # Connect to MongoDB
+   mongosh
+   
+   # Create database
+   use thanawiyapro
+   
+   # Database will be created automatically on first insert
+   ```
+
+4. **Sample Data** (automatically created on first user registration):
+   - 14 users (students and admins)
+   - 7 tutors with complete profiles
+   - Sample bookings and payments
+
+### Installation Steps
+
+1. **Clone and Install:**
+   ```bash
+   git clone https://github.com/ibrasonic/thanawiyapro.git
+   cd thanawiyapro
+   
+   # Install frontend dependencies
+   npm install
+   
+   # Install backend dependencies
+   cd backend
+   npm install
+   cd ..
+   ```
+
+2. **Configure Environment:**
+   ```bash
+   cd backend
+   cp .env.example .env
+   # Edit .env with your settings
+   nano .env
+   ```
+
+3. **Start Services:**
+   ```bash
+   # Terminal 1: Start MongoDB
+   mongod
+   
+   # Terminal 2: Start Backend
+   cd backend
+   npm start
+   
+   # Terminal 3: Start Frontend
+   npm run dev
+   ```
+
+4. **Verify Setup:**
+   - Backend: http://localhost:5000/api/auth/me (should return 401)
+   - Frontend: http://localhost:5173 (should load app)
+   - Database: `mongosh` → `use thanawiyapro` → `show collections`
+
+### Troubleshooting
+
+**MongoDB Connection Error:**
+```bash
+# Check if MongoDB is running
+mongosh
+
+# If not, start it:
+mongod --dbpath /path/to/your/data
+```
+
+**Port Already in Use:**
+```bash
+# Windows: Kill process on port 5000
+netstat -ano | findstr :5000
+taskkill /PID <PID> /F
+
+# Mac/Linux
+lsof -i :5000
+kill -9 <PID>
+```
+
+**CORS Error:**
+- Make sure `CLIENT_URL` in `.env` matches your frontend URL
+- Check that backend is running on port 5000
 
 ---
 
@@ -54,9 +333,9 @@ http://localhost:5173
 
 | Role | Email | Phone | Password |
 |------|-------|-------|----------|
-| **Student** | ahmed@student.thanawyiapro.com | 01012345678 | Student@123 |
-| **Tutor** | mohamed@tutor.thanawyiapro.com | 01234567890 | Tutor@123 |
-| **Admin** | admin@thanawyiapro.com | - | Admin@123 |
+| **Student** | ahmed.student@test.com | 01012345678 | Test123! |
+| **Tutor** | mohamed.tutor@test.com | 01234567890 | Test123! |
+| **Admin** | admin@thanawiyapro.com | - | Test123! |
 
 > **Note:** You can login using either email or phone number
 
@@ -111,39 +390,50 @@ http://localhost:5173
 - 📅 Book sessions and manage appointments
 - 💬 Direct messaging with tutors
 - ⭐ Rate tutors after sessions
-- 💳 Manage payment methods (Instapay, Vodafone Cash, Credit Cards)
+- 💳 Manage payment methods (Wallet, Instapay, Vodafone Cash, Bank Transfer, Fawry)
 - ❤️ Add tutors to favorites
 - 📊 Track statistics and bookings
 
 #### 👨‍🏫 **For Tutors**
-- 💰 Earnings dashboard with statistics
+- 💰 Earnings dashboard with real-time statistics from database
 - 📆 Session and schedule management
 - 👥 Student tracking
-- 💳 Payment method management (Instapay, Vodafone Cash, Bank Account)
+- 💳 Withdrawal method configuration (Instapay, Vodafone Cash, Bank Transfer, Fawry)
+- 💸 Request withdrawals with minimum 100 EGP (3-5 business days processing)
 - 💬 Messaging system with students
 - 📈 Performance and rating tracking
+- 📊 Monthly earnings breakdown and transaction history
 
 #### 👨‍💼 **For Admins**
 - 📊 Comprehensive control dashboard
 - ✅ Review and approve/reject new tutors
 - 👥 User management (students and tutors)
 - 📋 Booking management
-- 📈 Detailed reports and analytics
+- � Payment approval system (deposits and withdrawals)
+- 📝 Transaction proof review and verification
+- ❌ Reject payments with reason
+- �📈 Detailed reports and analytics
 - ⚙️ Platform settings
 
 ### 💎 Technical Features
 
 ✅ **Fully Responsive Design** - Works on all devices  
+✅ **Backend Integration** - Node.js + Express + MongoDB  
+✅ **RESTful API** - 29 API endpoints  
+✅ **Database Integration** - MongoDB with Mongoose ODM  
+✅ **Authentication System** - JWT-based authentication  
+✅ **Payment Processing** - Multi-method payment system with approval workflow  
 ✅ **Lazy Loading** - Smart page loading  
 ✅ **Error Boundary** - Error handling  
 ✅ **Code Splitting** - Optimized code bundles  
 ✅ **Custom Hooks** - Reusable hooks  
-✅ **API Service Layer** - Organized service layer  
-✅ **Protected Routes** - Route protection  
+✅ **API Service Layer** - Organized service layer with centralized API calls  
+✅ **Protected Routes** - Role-based route protection  
 ✅ **Toast Notifications** - Interactive notifications  
 ✅ **WCAG 2.1 AA** - Accessibility compliance  
 ✅ **RTL Support** - Full Arabic language support  
-✅ **Form Validation** - Input validation (Egyptian phone, email, strong password)
+✅ **Form Validation** - Input validation (Egyptian phone, email, strong password)  
+✅ **Real-time Data** - All pages fetch live data from database
 
 ---
 
@@ -196,16 +486,40 @@ http://localhost:5173
 
 ### Testing Features
 
-#### ✓ Payment System
+#### ✓ Payment System (Student - Wallet Charging)
 1. Login as student
 2. Go to "طرق الدفع" (Payment Methods)
-3. Add new payment method:
-   - Instapay (phone number)
-   - Vodafone Cash (phone number)
-   - Bank Card (16 digits)
-4. Set default payment method
-5. Book a session with a tutor
-6. Default payment method will be auto-selected
+3. Charge wallet using:
+   - **Wallet** - Instant balance (default method for bookings)
+   - **Instapay** - Enter phone/instapay address and amount
+   - **Vodafone Cash** - Enter phone number and amount
+   - **Bank Transfer** - Transfer to bank account (بنك مصر, Account: 1234567890123456, IBAN: EG380002001234567890123456789)
+   - **Fawry** - Use code 8374629 and upload receipt
+4. Upload transaction proof (screenshot/receipt) for non-wallet methods
+5. Wait for admin approval (status shows as pending)
+6. Balance updated after approval
+
+#### ✓ Tutor Withdrawal System
+1. Login as tutor
+2. Configure withdrawal method in "طرق الدفع":
+   - **Instapay** - Phone number or instapay address (name@instapay)
+   - **Vodafone Cash** - Phone number
+   - **Bank Transfer** - Account number, IBAN, and bank name
+   - **Fawry** - Phone number and account name
+3. Go to "الأرباح" (Earnings)
+4. Click "سحب الأرباح" (Withdraw)
+5. Enter amount (minimum 100 EGP, maximum available balance)
+6. Select withdrawal method (Instapay, Vodafone, Bank, or Fawry)
+7. Request submitted for admin approval (3-5 business days)
+
+#### ✓ Admin Payment Approval
+1. Login as admin
+2. Go to "المدفوعات" (Payments)
+3. View pending deposits and withdrawals
+4. Click "عرض التفاصيل" to view transaction details
+5. Review transaction proof/receipt
+6. Approve or reject with reason
+7. User balance updated automatically on approval
 
 #### ✓ Favorites
 1. Login as student
@@ -326,26 +640,33 @@ If you find any issues during testing:
 
 ## 🛠️ Tech Stack
 
-### Core
+### Frontend
 - **React** 18.3.1 - UI library
 - **Vite** 6.0.7 - Build tool
 - **React Router** 7.9.6 - Navigation
-
-### UI Framework
 - **Bootstrap** 5.3.8 - CSS framework
 - **React Bootstrap** 2.10.10 - Bootstrap components for React
 - **React Icons** 5.5.0 - Icon library
-
-### Utilities
 - **Chart.js** 4.5.1 + **react-chartjs-2** 5.3.1 - Charts
 - **react-toastify** 11.0.5 - Notifications
-- **bcryptjs** 3.0.3 - Password encryption
-- **PropTypes** 15.8.1 - Type checking
+
+### Backend
+- **Node.js** v22.12.0 - JavaScript runtime
+- **Express.js** 4.18.2 - Web framework
+- **MongoDB** - NoSQL database
+- **Mongoose** 8.9.4 - MongoDB ODM
+- **bcryptjs** 2.4.3 - Password hashing
+- **jsonwebtoken** 9.0.2 - JWT authentication
+- **express-validator** 7.2.1 - Request validation
+- **morgan** 1.10.0 - HTTP request logger
+- **cors** 2.8.5 - CORS middleware
+- **dotenv** 16.4.7 - Environment variables
 
 ### Dev Tools
 - **ESLint** 9.39.1 - Code linting
 - **Prettier** 3.6.2 - Code formatting
 - **eslint-plugin-jsx-a11y** 6.10.2 - Accessibility linting
+- **nodemon** 3.1.9 - Auto-restart for development
 
 ---
 
@@ -353,40 +674,69 @@ If you find any issues during testing:
 
 ```
 thanawiyapro/
+├── backend/                   # Backend API
+│   ├── config/
+│   │   └── db.js             # MongoDB connection
+│   ├── controllers/          # Request handlers
+│   │   ├── authController.js
+│   │   ├── userController.js
+│   │   ├── tutorController.js
+│   │   ├── bookingController.js
+│   │   └── paymentController.js
+│   ├── middleware/           # Express middleware
+│   │   ├── authMiddleware.js
+│   │   ├── errorHandler.js
+│   │   └── validators.js
+│   ├── models/               # Mongoose schemas
+│   │   ├── User.js
+│   │   ├── Tutor.js
+│   │   ├── Booking.js
+│   │   └── Payment.js
+│   ├── routes/               # API routes
+│   │   ├── authRoutes.js
+│   │   ├── userRoutes.js
+│   │   ├── tutorRoutes.js
+│   │   ├── bookingRoutes.js
+│   │   └── paymentRoutes.js
+│   ├── utils/                # Utilities
+│   │   └── asyncHandler.js
+│   ├── .env                  # Environment variables
+│   ├── package.json
+│   └── server.js             # Entry point
 ├── public/
-│   ├── data.json              # Demo data
+│   ├── data.json             # Legacy demo data
 │   └── logo.svg               
 ├── src/
-│   ├── components/            # Shared components
+│   ├── components/           # Shared components
 │   │   ├── ErrorBoundary.jsx
 │   │   ├── Footer.jsx
 │   │   ├── LoadingSpinner.jsx
 │   │   └── NavigationBar.jsx
-│   ├── pages/                 # Application pages
-│   │   ├── student/          # 6 student pages
-│   │   ├── tutor/            # 6 tutor pages
-│   │   ├── admin/            # 6 admin pages
+│   ├── pages/                # Application pages
+│   │   ├── student/          # 6 student pages (API integrated)
+│   │   ├── tutor/            # 7 tutor pages (API integrated)
+│   │   ├── admin/            # 6 admin pages (API integrated)
 │   │   ├── Home.jsx
 │   │   ├── Login.jsx
 │   │   ├── Register.jsx
 │   │   ├── Checkout.jsx
 │   │   └── NotFound.jsx
-│   ├── services/              # Service layer
-│   │   └── api.js            # 26 API functions
-│   ├── context/               # React Context
-│   │   └── AuthContext.jsx
-│   ├── utils/                 # Helper functions
+│   ├── services/             # Service layer
+│   │   └── backendApi.js     # API client (29 endpoints)
+│   ├── context/              # React Context
+│   │   └── AuthContext.jsx   # Auth state management
+│   ├── utils/                # Helper functions
 │   │   ├── storage.js
 │   │   └── helpers.js
-│   ├── App.jsx               # Main component with ProtectedRoute
+│   ├── App.jsx               # Main component
 │   ├── main.jsx              # Entry point
 │   ├── App.css               # App styles
 │   └── index.css             # Global styles
-├── .gitignore                # Git ignore file
-├── index.html                # Main HTML file
-├── package.json              # Project information
-├── vite.config.js            # Vite configuration
-├── LICENSE                   # MIT License
+├── .gitignore
+├── index.html
+├── package.json
+├── vite.config.js
+├── LICENSE
 └── README.md                 # This file
 ```
 
@@ -394,22 +744,68 @@ thanawiyapro/
 
 ## 💾 Data Management
 
-- Demo data stored in `public/data.json`
-- Data copied to `localStorage` on startup
-- Data includes:
-  - ✅ Users (students, tutors, admins)
-  - ✅ Bookings
-  - ✅ Messages
-  - ✅ Reviews
-  - ✅ Transactions
-  - ✅ Notifications
+### Database: MongoDB (thanawiyapro)
+
+**Collections:**
+- **users** - Student and admin accounts
+- **tutors** - Tutor profiles and academic information
+- **bookings** - Session bookings and scheduling
+- **payments** - All payment transactions (deposits, withdrawals, bookings)
+
+**Sample Data:**
+- 14 Users (students and admins)
+- 7 Tutors (with complete profiles)
+- ~16 Bookings (confirmed, pending, completed)
+- ~23 Payments (completed and pending transactions)
+
+### API Endpoints (29 total)
+
+**Authentication (4)**
+- POST `/api/auth/register` - Register new user
+- POST `/api/auth/login` - Login user
+- GET `/api/auth/me` - Get current user
+- PUT `/api/auth/password` - Update password
+
+**Users (7)**
+- GET `/api/users` - Get all users (admin)
+- GET `/api/users/:id` - Get user by ID
+- PUT `/api/users/:id` - Update user profile
+- DELETE `/api/users/:id` - Delete user (admin)
+- PUT `/api/users/:id/balance` - Update user balance
+- POST `/api/users/:id/favorites/:tutorId` - Add tutor to favorites
+- DELETE `/api/users/:id/favorites/:tutorId` - Remove tutor from favorites
+
+**Tutors (6)**
+- GET `/api/tutors` - Get all tutors
+- GET `/api/tutors/:id` - Get tutor by ID
+- GET `/api/tutors/user/:userId` - Get tutor by user ID
+- POST `/api/tutors` - Create tutor profile
+- PUT `/api/tutors/:id` - Update tutor
+- DELETE `/api/tutors/:id` - Delete tutor (admin)
+
+**Bookings (5)**
+- GET `/api/bookings` - Get all bookings (filtered by role)
+- GET `/api/bookings/:id` - Get booking by ID
+- POST `/api/bookings` - Create new booking
+- PUT `/api/bookings/:id` - Update booking (status, rating, review)
+- DELETE `/api/bookings/:id` - Delete booking (admin)
+
+**Payments (7)**
+- GET `/api/payments` - Get all payments (filtered by role)
+- GET `/api/payments/:id` - Get payment by ID
+- POST `/api/payments` - Create payment (deposit/withdrawal/booking)
+- PUT `/api/payments/:id/approve` - Approve payment (admin)
+- PUT `/api/payments/:id/reject` - Reject payment with reason (admin)
+- PUT `/api/payments/:id` - Update payment status (admin)
+- DELETE `/api/payments/:id` - Delete payment (admin)
 
 ### Important Notes
-- All data is stored in `localStorage` for demo purposes
-- Initial data loaded from `public/data.json`
-- Can reset data by clearing `localStorage`
-- Project works without a backend
-- All accounts defined in `src/utils/storage.js`
+- All frontend pages now fetch real data from MongoDB
+- JWT-based authentication with token expiry
+- Password hashing using bcrypt
+- Input validation on both frontend and backend
+- Error handling with custom error classes
+- Legacy `public/data.json` kept for reference only
 
 ---
 
@@ -436,20 +832,51 @@ thanawiyapro/
 - ✅ High contrast ratios for text
 
 ### Payment System
-- ✅ Multiple payment methods support
-  - 📱 Instapay (students and tutors)
-  - 📱 Vodafone Cash (students and tutors)
-  - 💳 Credit Cards (students only)
-  - 🏦 Bank Account/IBAN (tutors only)
-- ✅ Set default payment method
-- ✅ Manage and delete payment methods
-- ✅ Display platform fees (5% for students, 15% for tutors)
-- ✅ Professional checkout page
+- ✅ **Five Payment Methods:**
+  - 💰 **Wallet** - Instant balance (default for bookings)
+  - 📱 **Instapay** - Phone number or instapay address (name@instapay)
+  - 📱 **Vodafone Cash** - Mobile wallet
+  - 🏦 **Bank Transfer** - Direct bank deposit (بنك مصر and 7 other banks)
+  - 🎫 **Fawry** - Payment code: 8374629
+
+- ✅ **Student Features:**
+  - Charge wallet using any payment method
+  - Upload transaction proof (screenshot/receipt)
+  - Track pending deposits
+  - Use wallet balance for instant booking
+
+- ✅ **Tutor Features:**
+  - Configure withdrawal methods
+  - Request withdrawals (min 100 EGP)
+  - Track earnings and transaction history
+  - Monthly earnings breakdown
+  - 3-5 business days processing time
+
+- ✅ **Admin Approval Workflow:**
+  - Review all deposits and withdrawals
+  - View transaction proofs
+  - Approve or reject with reason
+  - Automatic balance updates
+  - Transaction status tracking
+
+- ✅ **Payment Types:**
+  - Deposit - Student wallet charging
+  - Withdrawal - Tutor earnings withdrawal
+  - Booking - Session payment
+  - Refund - Cancelled session refund
+
+- ✅ **Database Schema:**
+  - Payment model with validation
+  - Transaction ID generation
+  - Status tracking (pending, completed, failed, cancelled, rejected)
+  - Transaction proof storage
+  - Rejection reason logging
 
 ---
 
 ## 🚀 Available Commands
 
+### Frontend
 ```bash
 # Development mode
 npm run dev
@@ -461,6 +888,35 @@ npm run build
 npm run preview
 ```
 
+### Backend
+```bash
+# Start server (with nodemon)
+cd backend
+npm start
+
+# Start MongoDB
+mongod
+
+# Access MongoDB shell
+mongosh thanawiyapro
+```
+
+### Database Commands
+```javascript
+// View collections
+show collections
+
+// Count documents
+db.users.countDocuments()
+db.tutors.countDocuments()
+db.bookings.countDocuments()
+db.payments.countDocuments()
+
+// View recent data
+db.payments.find().sort({_id: -1}).limit(5)
+db.bookings.find().sort({_id: -1}).limit(5)
+```
+
 ---
 
 ## 📖 Additional Resources
@@ -469,25 +925,50 @@ For detailed testing procedures and more information, all test accounts and feat
 
 ---
 
-## 🌟 Future Development
+## 🌟 Completed Features
 
-### Backend Integration
-- [ ] REST API (Node.js/Express or Django)
-- [ ] Database (MongoDB/PostgreSQL)
-- [ ] JWT Authentication
-- [ ] Real payment system (Stripe/PayPal/Fawry)
-- [ ] Real-time notifications (WebSockets/Firebase)
+### ✅ Backend Integration
+- ✅ REST API with Node.js/Express (29 endpoints)
+- ✅ MongoDB database with Mongoose ODM
+- ✅ JWT Authentication with token management
+- ✅ Multi-method payment system with approval workflow
+- ✅ Real-time data fetching across all pages
+- ✅ Password hashing with bcrypt
+- ✅ Input validation and error handling
+- ✅ CORS configuration for frontend-backend communication
 
-### Enhancements
+### ✅ Payment System
+- ✅ Five payment methods (Wallet, Instapay, Vodafone, Bank, Fawry)
+- ✅ Student wallet charging with proof upload
+- ✅ Tutor withdrawal requests (min 100 EGP)
+- ✅ Admin approval/rejection workflow
+- ✅ Transaction history and tracking
+- ✅ Balance management and updates
+
+### ✅ Database Integration
+- ✅ All pages fetch live data from MongoDB
+- ✅ User authentication with database
+- ✅ Booking management with database
+- ✅ Payment transactions in database
+- ✅ Sample data for testing
+
+## 🚧 Future Enhancements
+
+### Planned Features
+- [ ] Real payment gateway integration (Stripe/Fawry API)
+- [ ] Real-time notifications (WebSockets/Socket.io)
+- [ ] Live video sessions (WebRTC/Zoom API)
 - [ ] Mobile app (React Native)
 - [ ] Progressive Web App (PWA)
 - [ ] Dark Mode
-- [ ] Multi-language support (i18n)
+- [ ] Multi-language support (English/Arabic)
 - [ ] Advanced rating and review system
-- [ ] Live video sessions
 - [ ] Push notifications
-- [ ] Advanced reports and analytics
+- [ ] Advanced analytics dashboard
 - [ ] AI-powered tutor recommendations
+- [ ] Email notifications
+- [ ] SMS verification
+- [ ] Session recording and playback
 
 ---
 
