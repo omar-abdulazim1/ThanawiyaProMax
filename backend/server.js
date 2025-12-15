@@ -1,5 +1,5 @@
 import express from 'express';
-  import dotenv from 'dotenv';
+import dotenv from 'dotenv';
 import cors from 'cors';
 import connectDB from './config/db.js';
 import { errorHandler, notFound } from './middleware/errorHandler.js';
@@ -21,11 +21,17 @@ connectDB();
 // Initialize Express app
 const app = express();
 
-// Middleware
+// ✅ CORS FIX (important)
 app.use(cors({
   origin: process.env.CLIENT_URL || 'https://thanawiyapro.netlify.app',
-  credentials: true
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
+
+// Handle preflight requests
+app.options('*', cors());
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
