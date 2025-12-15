@@ -1,5 +1,5 @@
 import express from 'express';
-import dotenv from 'dotenv';
+  import dotenv from 'dotenv';
 import cors from 'cors';
 import connectDB from './config/db.js';
 import { errorHandler, notFound } from './middleware/errorHandler.js';
@@ -23,7 +23,7 @@ const app = express();
 
 // Middleware
 app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:5173',
+  origin: process.env.CLIENT_URL || 'https://thanawiyapro.netlify.app',
   credentials: true
 }));
 app.use(express.json());
